@@ -1,0 +1,19 @@
+# Private course content and source material never belong in a release.
+/Datasets/
+/Private/
+/Out/
+/Artifacts/
+**/Logs/
+**/logs/
+**/proofquest.ini
+**/proofquest.ini.tmp
+**/*.sqlite3*
+**/*.log
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+# Dist contains the single current runnable release by explicit user request.
+# Do not add broad executable/DLL ignores that break the committed app bundle.

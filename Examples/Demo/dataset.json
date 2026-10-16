@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "proof-quest-demo",
+  "title": "Proof Quest demo",
+  "chapters": [
+    {
+      "id": "shapes",
+      "title": "Shapes"
+    },
+    {
+      "id": "colors",
+      "title": "Colors"
+    }
+  ],
+  "question_bank": "questions.json"
+}
