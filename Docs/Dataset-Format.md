@@ -34,9 +34,12 @@ The bank is an object containing a nonempty `version` string and a nonempty `que
 | `correct` | At least two distinct valid answer formulations |
 | `wrong` | At least eight distinct incorrect alternatives |
 | `explanation` | Why the correct answer is correct |
+| `distractor_sets` | Optional nonempty list of approved four-index combinations into `wrong`; each combination must contain four distinct valid indexes |
 | `answer_format` | Optional uniform display notation: `number`, `set`, `truth_column`, `complexity`, or `property_list` |
 
-Each run selects one member of `correct` and four members of `wrong`. Equivalent correct formulations may appear in the pool but never together in an exam. No answer text may be duplicated or overlap between pools after trimming and case-folding. Source references are displayed as plain text. Questions, answers, and explanations may contain Unicode, line breaks, and long text; answer cards wrap instead of truncating.
+Each run selects one member of `correct` and four members of `wrong`. With `distractor_sets`, it randomly selects one approved combination instead of four unrestricted distractors; the five displayed positions are still shuffled. Every combination must work with every correct formulation. Equivalent correct formulations may appear in the pool but never together in an exam. No answer text may be duplicated or overlap between pools after trimming and case-folding. Source references are displayed as plain text. Questions, answers, and explanations may contain Unicode, line breaks, and long text; answer cards wrap instead of truncating.
+
+Apply the [question curation register](Question-Curation.md) to semantic, verdict-balance, and surface clues before release.
 
 Use one presentation style throughout each question's answer pool. Avoid mixing bare numbers or sets with phrases such as “The value is” or “The resulting set is.” With `answer_format`, the loader checks that all answers match the specified notation, that formatted distractors are distinct, and that none collide with a formatted correct answer. Correct formulations such as `7` and `7.0` can share the same canonical display because only one correct alternative is sampled. The engine saves consistent display strings in new snapshots. Older saved runs are formatted for viewing only when every displayed choice matches one narrowly recognized notation; the original log text and answer indexes remain unchanged.
 
@@ -54,7 +57,7 @@ Supply actual speech-service word boundaries or a verified forced alignment. Do 
 
 1. Put the private source and all derived files under ignored `Datasets/<Course>/`, or outside the repository. Keep the entire dataset separate from application resources.
 2. Give a generator the manifest and question schemas, the desired sections, and the source text. Ask it to cover definitions, conceptual distinctions, calculations, applications, and common mistakes. Preserve required domains and assumptions.
-3. Require two independently valid answer formulations and at least eight plausible incorrect alternatives per question, with a concise explanation and source reference. Review distractors for accidental correctness and avoid answer-length or wording clues.
+3. Require two independently valid answer formulations and at least eight plausible incorrect alternatives per question, with a concise explanation and source reference. Apply the anti-pattern register, review distractors for accidental correctness, and audit generated choice sets.
 4. Use stable topic and family labels so variants do not crowd out distinct concepts. Validate before opening: `python Scripts/validate_dataset.py path/to/dataset.json`.
 5. If audio is wanted, write a separate listening script, synthesize it, and align word/sentence offsets. Validate the timing JSON and inspect playback. Optional audio may be omitted while questions are being prepared.
 6. Click Select new dataset. The INI stores the manifest path, not a copy of the source material.

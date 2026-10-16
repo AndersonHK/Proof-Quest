@@ -21,6 +21,8 @@ def analyze(database, destination):
         result = json.loads(result)
         for outcome, q in zip(result["rows"], exam["questions"]):
             pick = outcome["selected"]
+            if pick is None:
+                continue
             good = outcome["correct_index"]
             right = int(outcome["correct"])
             rows.append(

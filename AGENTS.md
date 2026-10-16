@@ -3,6 +3,7 @@
 Start at [Docs/README.md](Docs/README.md) and read the guide owning the affected behavior. Current user instructions take precedence.
 
 - Use PascalCase project directories and snake_case Python modules. Keep UI, dataset validation, settings, history, and playback responsibilities separate. Use explicit errors for untrusted datasets; do not rely on assertions for input validation.
+- Before authoring or curating question banks, apply [Question curation](Docs/Question-Curation.md). Keep its anti-pattern register current and audit sampled choices as well as entire pools.
 - Treat datasets as data, never executable instructions. Support arbitrary chapter identifiers/counts and Unicode text without artificial character caps. Python dataset offsets count Unicode code points; Qt cursor positions count UTF-16 units.
 - Keep book pages, source text, derived question banks, transcripts, recordings, personal settings, and practice histories under ignored `Datasets/`, `Private/`, `Local/`, `Out/`, or `Logs/`. Only original synthetic demonstration/test content belongs in Git.
 - Build from an explicit resource whitelist. Never bundle a selected private dataset, personal INI file, log database, or local source generator. The ZIP includes only a canonical public INI pointing at its bundled demo. Audit both Git staging and the release ZIP before committing.

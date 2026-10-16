@@ -84,6 +84,20 @@ def validate_bank(bank, chapter_ids=None):
             f'{q["id"]}: duplicate/overlapping answer text.',
         )
         kind = q.get("answer_format")
+        if "distractor_sets" in q:
+            sets = q["distractor_sets"]
+            require(
+                isinstance(sets, list) and bool(sets),
+                f'{q["id"]}: distractor_sets must be nonempty.',
+            )
+            for group in sets:
+                require(
+                    isinstance(group, list)
+                    and len(group) == 4
+                    and all(type(i) is int and 0 <= i < len(q["wrong"]) for i in group)
+                    and len(set(group)) == 4,
+                    f'{q["id"]}: each distractor set needs four distinct valid wrong-answer indexes.',
+                )
         if kind is not None:
             require(kind in FORMATS, f'{q["id"]}: unknown answer_format.')
             require(

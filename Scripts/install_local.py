@@ -29,6 +29,26 @@ def main():
             if args.migrate_dist_state:
                 migrate_state(ROOT / "Dist" / "ProofQuest", destination)
             deploy(staging, destination)
+        if sys.platform == "win32":
+            import ctypes
+
+            # Invalidate only this app's shell entries, never the global icon cache.
+            notify = ctypes.windll.shell32.SHChangeNotify
+            notify.argtypes = [
+                ctypes.c_long,
+                ctypes.c_uint,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+            ]
+            notify.restype = None
+            for path in [
+                destination / "ProofQuest.exe",
+                destination / "_internal/Assets/Fable/application.ico",
+            ]:
+                value = ctypes.create_unicode_buffer(str(path))
+                notify(0x2000, 0x1005, ctypes.addressof(value), None)
+            value = ctypes.create_unicode_buffer(str(destination))
+            notify(0x1000, 0x1005, ctypes.addressof(value), None)
         print("Installed:", destination / "ProofQuest.exe")
         print("Settings and history are private and preserved on updates.")
         return 0

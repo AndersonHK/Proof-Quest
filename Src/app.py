@@ -61,7 +61,7 @@ def configure_fonts(app):
     app.setFont(QFont("Segoe UI", 11))
 
 
-from theme import STYLE
+from theme import STYLE, EXPLANATIONS, explanation_style
 from mascot import Fable
 from mascot_scene import FableJourney
 
@@ -91,7 +91,7 @@ class Trainer(QMainWindow):
             self.settings.get("window_height", 860),
         )
         self.setMinimumSize(980, 700)
-        self.setWindowIcon(QIcon(str(ROOT / "Assets" / "Fable" / "neutral.png")))
+        self.setWindowIcon(QIcon(str(ROOT / "Assets" / "Fable" / "application.ico")))
         self.bank = dataset.bank
         self.user_dir = self.settings.home / "Logs" / dataset.history_key
         self.history = History(self.user_dir / "practice.sqlite3")
@@ -166,7 +166,9 @@ class Trainer(QMainWindow):
             self.started = time.monotonic()
             self.read_only = False
             self.banner.setText(
-                "Welcome back. Your unfinished run is exactly where you left it."
+                "Your saved run uses an older question bank. Regenerate test to use the revised choices."
+                if self.exam.get("bank_version") != self.bank["version"]
+                else "Welcome back. Your unfinished run is exactly where you left it."
             )
             self.fill_sidebar()
             self.show_question(0)
@@ -383,7 +385,11 @@ class Trainer(QMainWindow):
         for i, q in enumerate(self.exam["questions"]):
             status = "○"
             if self.result:
-                status = "✓" if self.result["rows"][i]["correct"] else "✕"
+                status = (
+                    "—"
+                    if self.result["rows"][i]["unanswered"]
+                    else "✓" if self.result["rows"][i]["correct"] else "✕"
+                )
             elif str(i) in self.answers:
                 status = "●"
             item = QListWidgetItem(
@@ -442,18 +448,19 @@ class Trainer(QMainWindow):
             row = self.result["rows"][index]
             verdict = self.feedback.phrase((self.exam["id"], index), row["correct"])
             if row["unanswered"]:
-                verdict = "Left unanswered. " + verdict
+                verdict = "Not attempted. This question did not affect your score."
             self.explanation.setText(verdict + " " + q["explanation"])
             if changed:
                 self.journey.question_changed()
-            if row["correct"]:
-                self.explanation.setStyleSheet(
-                    "QLabel {background:#193a3b;color:#b6f1df;border:1px solid #4a8a72;border-radius:10px;padding:16px;}"
-                )
-            if not row["correct"]:
-                self.explanation.setStyleSheet(
-                    "QLabel {background:#542d3b;color:#ffd8df;border:1px solid #d97c91;border-radius:10px;padding:16px;}"
-                )
+            heading = (
+                "For review"
+                if row["unanswered"]
+                else EXPLANATIONS[bool(row["correct"])][3]
+            )
+            self.explanation.setText(heading + " · " + self.explanation.text())
+            self.explanation.setStyleSheet(
+                explanation_style(row["correct"] or row["unanswered"])
+            )
         else:
             self.explanation.setText(q["explanation"])
         self.previous.setEnabled(index > 0)
@@ -574,7 +581,7 @@ class Trainer(QMainWindow):
             and QMessageBox.question(
                 self,
                 "Finish with unanswered questions?",
-                f"{missing} questions are unanswered and will be marked incorrect. Finish now?",
+                f"{missing} questions are unanswered and will be excluded from your score and accuracy. Finish now?",
                 QMessageBox.Yes | QMessageBox.No,
             )
             != QMessageBox.Yes
@@ -591,18 +598,19 @@ class Trainer(QMainWindow):
         self.refresh_stats()
         n = self.result["total"]
         right = self.result["correct"]
-        pct = round(100 * right / n)
+        pct = round(100 * right / n) if n else None
         flavor = (
             "A proof well played."
-            if pct >= 90
+            if pct is not None and pct >= 90
             else (
                 "The induction is gaining momentum."
-                if pct >= 65
+                if pct is not None and pct >= 65
                 else "Counterexamples located. Now you know where to train."
             )
         )
         self.banner.setText(
-            f"{right} correct · {n-right} to revisit · {pct}% · {flavor}"
+            f"{right} correct · {n-right} incorrect · {self.result['unanswered']} not attempted · "
+            + (f"{pct}% · {flavor}" if pct is not None else "No scored answers.")
         )
         if personal_best:
             self.banner.setText(self.banner.text() + " New personal best!")
@@ -613,7 +621,7 @@ class Trainer(QMainWindow):
         e = html.escape
         r = self.result
         parts = [
-            f'<h1>{r["correct"]} / {r["total"]} correct</h1><p>Green is the correct answer. Select any question in the sidebar to inspect all five choices.</p>'
+            f'<h1>{r["correct"]} / {r["total"]} attempted correct</h1><p>{r["unanswered"]} not attempted · excluded from scoring</p><p>Green is the correct answer. Select any question in the sidebar to inspect all five choices.</p>'
         ]
         for row, q in zip(r["rows"], self.exam["questions"]):
             answers = display_answers(
@@ -624,20 +632,27 @@ class Trainer(QMainWindow):
             )
             correct = answers[row["correct_index"]]
             parts.append(
-                f'<h3><a style="color:#c6a8ff" href="q:{row["index"]}">{"✓" if row["correct"] else "✕"} {row["index"]+1}. {e(q["prompt"])}</a></h3>'
+                f'<h3><a style="color:#c6a8ff" href="q:{row["index"]}">{"—" if row["unanswered"] else "✓" if row["correct"] else "✕"} {row["index"]+1}. {e(q["prompt"])}</a></h3>'
             )
             if not row["correct"]:
                 parts.append(f'<p style="color:#ffb3c1">Your answer: {e(selected)}</p>')
             parts.append(
                 f'<p style="background:#215044;color:#d5ffef;padding:8px">Correct: {e(correct)}</p>'
             )
-            color = "#b6f1df" if row["correct"] else "#ffd8df"
-            background = "#193a3b" if row["correct"] else "#542d3b"
-            phrase = self.feedback.phrase(
-                (self.exam["id"], row["index"]), row["correct"]
+            color, background, _, heading = EXPLANATIONS[
+                bool(row["correct"] or row["unanswered"])
+            ]
+            if row["unanswered"]:
+                heading = "Not attempted · excluded from scoring"
+            phrase = (
+                ""
+                if row["unanswered"]
+                else self.feedback.phrase(
+                    (self.exam["id"], row["index"]), row["correct"]
+                )
             )
             parts.append(
-                f'<p style="color:{color};background:{background};padding:12px">{e(phrase)} {e(q["explanation"])}</p><p style="color:#baaacf">Source {e(q["source"])} · {e(q["topic"])}</p><hr>'
+                f'<p style="color:{color};background:{background};padding:12px">{e(heading)} · {e(phrase)} {e(q["explanation"])}</p><p style="color:#baaacf">Source {e(q["source"])} · {e(q["topic"])}</p><hr>'
             )
         self.report.setHtml("".join(parts))
 
@@ -654,7 +669,7 @@ class Trainer(QMainWindow):
         layout.addWidget(self.stats_label)
         layout.addWidget(
             label(
-                "Topic accuracy · unanswered questions count as misses · completed runs only",
+                "Topic accuracy · attempted questions in completed runs only",
                 "muted",
             )
         )
@@ -699,7 +714,7 @@ class Trainer(QMainWindow):
         stats, runs = self.history.stats()
         total = sum(r["result"]["total"] for r in runs)
         right = sum(r["result"]["correct"] for r in runs)
-        xp = right * 10 + len(runs) * 20
+        xp = right * 10 + sum(r["result"]["total"] > 0 for r in runs) * 20
         level = 1 + xp // 250
         self.xp.setText(f"Level {level} · {xp:,} XP · {len(runs)} finished runs")
         self.stats_label.setText(
@@ -793,8 +808,14 @@ class Trainer(QMainWindow):
                 parts.append(
                     f'<p style="color:{color}">{"✓ " if opt["correct"] else ""}{"[selected] " if item["selected"]==j else ""}{e(answers[j])}</p>'
                 )
-            color = "#b6f1df" if item["correct"] else "#ffd8df"
-            parts.append(f'<p style="color:{color}">{e(q["explanation"])}</p><hr>')
+            color, background, _, heading = EXPLANATIONS[
+                bool(item["correct"] or item["unanswered"])
+            ]
+            if item["unanswered"]:
+                heading = "Not attempted · excluded from scoring"
+            parts.append(
+                f'<p style="color:{color};background:{background}">{e(heading)} · {e(q["explanation"])}</p><hr>'
+            )
         browser.setHtml("".join(parts))
         dialog.exec()
 
@@ -908,6 +929,12 @@ class Trainer(QMainWindow):
 
 
 def main():
+    if sys.platform == "win32":
+        import ctypes
+
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+            "ProofQuest.Fable.Desktop"
+        )
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=Path)
     parser.add_argument(

@@ -2,7 +2,7 @@
 
 Proof Quest practices recall with randomized exams and helps review material through synchronized audio. It works offline after installation and never uploads your answers.
 
-Fable is the fox in the header and application icon. The violet/plum/cream palette comes from its artwork. It blinks while you practice and winks when you select an answer, regardless of correctness. On finishing, it walks off the left edge and returns from the right carrying a mug, settling beneath Regenerate test. Changing the reviewed question starts a short sip. Regenerating sends it off to the right and back into the header without the mug. Click Fable in the header to preview the wink. A new personal-best percentage for the active dataset starts with a small paws-up cheer and sparse confetti from both sides, angled about 30 degrees upward. The first nonzero completed result establishes a record; equal scores and abandoned runs do not trigger another celebration. Records compare percentages across all run sizes and chapter filters for that dataset. The motions are intentionally quiet and never block controls. Green still identifies correct answers and red still marks missed-answer explanations.
+Fable is the fox in the header and application icon. The violet/plum/cream palette comes from its artwork. It blinks while you practice and winks when you select an answer, regardless of correctness. On finishing, it walks off the left edge and returns from the right carrying a mug, settling beneath Regenerate test. Changing the reviewed question starts a short sip; switching again lets that sip finish. Clicking the fox with its mug blinks while holding the mug, after any active sip. Regenerating sends it off to the right and back into the header without the mug. Click Fable in the header to preview the wink. A new personal-best percentage for the active dataset starts with a small paws-up cheer and sparse confetti from both sides, angled about 30 degrees upward. The first nonzero completed result establishes a record; equal scores and abandoned runs do not trigger another celebration. Records compare percentages across all run sizes and chapter filters for that dataset. The motions are intentionally quiet and never block controls. Green still identifies correct answers and red still marks incorrect answer selections. Explanation panels use blue for correct reasoning and orange for a step to review, with explicit headings.
 
 ## Install and update
 
@@ -24,11 +24,11 @@ Full bank displays the total bank size in its label. You can always edit the adj
 
 Every question displays one randomly chosen correct alternative and four randomly chosen incorrect alternatives. The five choices are shuffled. Correctness stays hidden until you finish. Use **Next question**, **Previous**, or the question sidebar to navigate; a filled circle means answered, not necessarily correct. You may change or clear an answer before grading. Keys **1–5** select answers; **Alt+Right** advances.
 
-**Finish exam** grades every question. Unanswered questions count as misses. Correct choices are highlighted green; an incorrect selection is marked separately. The report explains the answer and cites the dataset's source reference. Select a question in the sidebar to inspect its five choices.
+**Finish exam** grades every question. Unanswered questions are marked not attempted and excluded from scores, accuracy, weak-topic statistics, streaks, and records. Correct choices are highlighted green; an incorrect selection is marked separately. The report explains the answer and cites the dataset's source reference. Select a question in the sidebar to inspect its five choices.
 
-Missed-answer explanations use red; successful-answer explanations use green. Feedback introductions rotate through twelve phrases per outcome and remain stable while revisiting the same question. The submitted-exam banner shows the score and items to revisit, without elapsed time. Timing remains available in history and exports.
+Missed-answer explanations use muted orange and the heading “Review this step”; successful-answer explanations use blue and “Why this is correct.” Answer choices retain green/red grading colors. Feedback introductions rotate through twelve phrases per outcome and remain stable while revisiting the same question. The submitted-exam banner shows the score and items to revisit, without elapsed time. Timing remains available in history and exports.
 
-Regenerating an unfinished run preserves it as abandoned after a prompt. Closing or switching datasets preserves the unfinished run for later resumption. Completed and abandoned snapshots retain the exact questions, five choices, order, answers, timing, and answer-change events.
+Regenerating an unfinished run preserves it as abandoned after a prompt. Closing or switching datasets preserves the unfinished run for later resumption. Previously saved runs use the same attempted-only scoring when viewed or analyzed; their stored snapshots are not rewritten. Completed and abandoned snapshots retain the exact questions, five choices, order, answers, timing, and answer-change events.
 
 ## Listen
 
@@ -44,7 +44,7 @@ Audio is optional. A question-only dataset remains fully usable. Word highlights
 
 **Your progress** shows topic accuracy and run history for the active dataset. Double-click a saved run to review it without replacing the active exam. **Export all runs as JSONL** writes exact snapshots for later analysis. Low sample counts are labeled so they are not mistaken for reliable mastery estimates.
 
-Correct answers award ten XP each; finishing a run awards twenty. Each 250 XP adds a level. Abandoned runs do not affect XP or mastery accuracy.
+Correct answers award ten XP each; finishing a run with at least one attempted question awards twenty. Each 250 XP adds a level. Abandoned runs do not affect XP or mastery accuracy.
 
 Settings are in `proofquest.ini` beside the executable. Source-code launches keep the INI at the repository root. History databases are under adjacent `Logs/`, separated by dataset ID. A dataset's ID should remain stable across revisions and different books should use different IDs. Elapsed exam time counts the open run, including reading/listening time, but excludes time while the app is closed.
 

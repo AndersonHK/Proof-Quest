@@ -7,6 +7,21 @@ ACCENT = "#b79aff"
 CREAM = "#fff0cf"
 MUTED = "#baaacf"
 
+# Explanation panels are informational, separate from green/red answer grading.
+EXPLANATIONS = {
+    True: ("#cfe8ff", "#20364f", "#83b8e8", "Why this is correct"),
+    False: ("#ffe0b2", "#49301e", "#e5aa64", "Review this step"),
+}
+
+
+def explanation_style(correct):
+    text, background, border, _ = EXPLANATIONS[bool(correct)]
+    return (
+        f"QLabel {{background:{background};color:{text};border:1px solid {border};"
+        "border-radius:10px;padding:16px;}"
+    )
+
+
 STYLE = """
 QWidget {background:#171327;color:#f3eaf9;font-family:"Segoe UI";font-size:11pt;}
 QMainWindow {background:#110e1d;}

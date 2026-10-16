@@ -2,12 +2,14 @@
 
 import math
 import time
-from PySide6.QtCore import Qt, QRectF, QTimer
+from PySide6.QtCore import Qt, QRectF, QTimer, Signal
 from PySide6.QtGui import QPainter, QPixmap
 from PySide6.QtWidgets import QWidget
 
 
 class Fable(QWidget):
+    clicked = Signal()
+
     def __init__(self, assets, size=84):
         super().__init__()
         self.setAttribute(Qt.WA_NoSystemBackground)
@@ -88,7 +90,7 @@ class Fable(QWidget):
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self.check_in()
+            self.clicked.emit()
         super().mouseReleaseEvent(event)
 
     def paintEvent(self, event):

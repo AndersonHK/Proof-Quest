@@ -92,6 +92,7 @@ def parse_answer(text, kind):
         return ", ".join(v.strip() for v in value.split(","))
     if kind == "complexity":
         value = re.sub(r"^The tight order is\s+", "", value, flags=re.I).rstrip(".")
+        value = re.sub(r"^Θ\(2 × (.+)\)$", r"Θ(\1)", value)
         return value if re.fullmatch(r"Θ\(.+\)", value) else None
     if kind == "property_list":
         value = re.sub(r"^Exactly:\s*", "", value, flags=re.I).rstrip(".").lower()

@@ -22,6 +22,24 @@ def load_bank(path):
     return validate_bank(read_json(path))
 
 
+def sample_choices(question, rng):
+    """Sample one correct formulation and four distractors, then shuffle uniformly."""
+    wrong = (
+        [question["wrong"][i] for i in rng.choice(question["distractor_sets"])]
+        if question.get("distractor_sets")
+        else rng.sample(question["wrong"], 4)
+    )
+    options = [{"text": rng.choice(question["correct"]), "correct": True}]
+    options += [{"text": text, "correct": False} for text in wrong]
+    rng.shuffle(options)
+    formatted = display_answers(
+        [o["text"] for o in options], question.get("answer_format")
+    )
+    for option, text in zip(options, formatted):
+        option["text"] = text
+    return options
+
+
 def generate(bank, count=40, chapters=None, seed=None, weaknesses=None):
     chapters = (
         list(dict.fromkeys(q["chapter"] for q in bank["questions"]))
@@ -82,17 +100,14 @@ def generate(bank, count=40, chapters=None, seed=None, weaknesses=None):
     rng.shuffle(selected)
     questions = []
     for q in selected:
-        options = [{"text": rng.choice(q["correct"]), "correct": True}]
-        options += [{"text": x, "correct": False} for x in rng.sample(q["wrong"], 4)]
-        rng.shuffle(options)
-        formatted = display_answers(
-            [option["text"] for option in options], q.get("answer_format")
-        )
-        for option, text in zip(options, formatted):
-            option["text"] = text
+        options = sample_choices(q, rng)
         questions.append(
             {
-                **{k: v for k, v in q.items() if k not in ("correct", "wrong")},
+                **{
+                    k: v
+                    for k, v in q.items()
+                    if k not in ("correct", "wrong", "distractor_sets")
+                },
                 "options": options,
             }
         )
@@ -124,10 +139,27 @@ def grade(exam, answers):
                 "unanswered": pick is None,
             }
         )
+    return normalize_result(
+        {
+            "correct": sum(r["correct"] for r in rows),
+            "total": len(rows),
+            "rows": rows,
+        }
+    )
+
+
+def normalize_result(result):
+    """Apply current scoring to saved rows without rewriting historical snapshots."""
+    if not result or "rows" not in result:
+        return result
+    rows = result["rows"]
+    attempted = [r for r in rows if r["selected"] is not None]
     return {
-        "correct": sum(r["correct"] for r in rows),
-        "total": len(rows),
-        "rows": rows,
+        **result,
+        "total": len(attempted),
+        "question_count": len(rows),
+        "unanswered": len(rows) - len(attempted),
+        "correct": sum(bool(r["correct"]) for r in attempted),
     }
 
 
@@ -197,7 +229,7 @@ class History:
         for (saved,) in self.db.execute(
             "SELECT result FROM runs WHERE status='completed'"
         ):
-            previous = json.loads(saved)
+            previous = normalize_result(json.loads(saved))
             if (
                 previous["total"] > 0
                 and right * previous["total"] <= previous["correct"] * total
@@ -215,7 +247,7 @@ class History:
                 "created": r[1],
                 "status": r[2],
                 "seconds": r[3],
-                "result": json.loads(r[4]) if r[4] else None,
+                "result": normalize_result(json.loads(r[4])) if r[4] else None,
             }
             for r in rows
         ]
@@ -228,7 +260,7 @@ class History:
             json.loads(row[0]),
             json.loads(row[1]),
             row[2],
-            json.loads(row[3]) if row[3] else None,
+            normalize_result(json.loads(row[3])) if row[3] else None,
         )
 
     def stats(self):
@@ -236,6 +268,8 @@ class History:
         completed = [r for r in self.runs() if r["status"] == "completed"]
         for r in completed:
             for item in r["result"]["rows"]:
+                if item["selected"] is None:
+                    continue
                 t = topics[item["topic"]]
                 t["total"] += 1
                 t["right"] += int(item["correct"])

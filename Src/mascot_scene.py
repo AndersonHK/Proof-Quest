@@ -73,10 +73,12 @@ class FableJourney(QObject):
         self.state = "home"
         self.since = now()
         self.sip_since = None
+        self.blink_since = None
         self.return_start = None
         self.return_mug = True
         self.effects = Confetti(shell)
         mascot.setParent(shell)
+        mascot.clicked.connect(self.clicked)
         self.timer = QTimer(self)
         self.timer.setInterval(33)
         self.timer.timeout.connect(self.tick)
@@ -106,7 +108,16 @@ class FableJourney(QObject):
 
     def question_changed(self):
         if self.state == "review":
-            self.sip_since = self.now()
+            if self.sip_since is None or self.now() - self.sip_since >= 1.5:
+                self.sip_since = self.now()
+            self.tick()
+
+    def clicked(self):
+        if self.state == "home":
+            self.mascot.check_in()
+        elif self.state == "review":
+            # Finish an active sip before blinking; keep the mug in both poses.
+            self.blink_since = max(self.now(), (self.sip_since or 0) + 1.5)
             self.tick()
 
     def regenerated(self):
@@ -117,6 +128,7 @@ class FableJourney(QObject):
         self.return_mug = self.state in ("enter_review", "review", "exit_right")
         self.effects.hide()
         self.sip_since = None
+        self.blink_since = None
         self.begin("exit_right")
         self.tick()
 
@@ -184,6 +196,8 @@ class FableJourney(QObject):
                     else "sip" if sip < 0.85 else "lift" if sip < 1.05 else "content"
                 )
                 fox.lift = 0.8 * math.sin(sip * math.pi / 1.5)
+            elif self.blink_since is not None and 0 <= now - self.blink_since < 0.3:
+                fox.pose_override = "content"
             elif int(t * 10) % 68 == 0:
                 fox.pose_override = "content"
         elif self.state == "exit_right":

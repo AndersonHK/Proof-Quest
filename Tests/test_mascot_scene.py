@@ -101,6 +101,7 @@ def test_personal_best_uses_percentage_and_persistent_book_history(tmp_path):
         )
     history.db.commit()
     history.close()
+
     history = History(path)
     assert not history.is_personal_best({"correct": 12, "total": 20})
     assert not history.is_personal_best({"correct": 5, "total": 10})
@@ -109,3 +110,26 @@ def test_personal_best_uses_percentage_and_persistent_book_history(tmp_path):
     assert other.is_personal_best({"correct": 1, "total": 10})
     other.close()
     history.close()
+
+
+def test_sip_survives_question_changes_and_click_blinks_with_mug(
+    qt, make_dataset, tmp_path
+):
+    w, clock = window(qt, make_dataset, tmp_path)
+    w.journey.finished(False)
+    clock[0] += 2
+    w.journey.tick()
+    w.journey.question_changed()
+    started = w.journey.sip_since
+    clock[0] += 0.4
+    w.journey.question_changed()
+    QTest.mouseClick(w.mascot, Qt.LeftButton)
+    assert w.journey.sip_since == started
+    assert w.mascot.pose_override == "sip"
+    clock[0] = started + 1.55
+    w.journey.tick()
+    assert w.mascot.pose_override == "content"
+    clock[0] += 0.4
+    w.journey.tick()
+    assert w.mascot.pose_override == "mug"
+    w.close()

@@ -4,6 +4,7 @@ import hashlib, importlib.metadata, json, os, platform, shutil, subprocess, sys
 from pathlib import Path
 
 from distribution import ARCHIVE_NAME, create_archive, write_demo_settings
+from build_icon import build_icon
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -18,13 +19,7 @@ def main():
     from PySide6.QtGui import QIcon
 
     app = QApplication.instance() or QApplication([])
-    icon = out / "ProofQuest.ico"
-    if (
-        not QIcon(str(ROOT / "Assets" / "Fable" / "neutral.png"))
-        .pixmap(128, 128)
-        .save(str(icon), "ICO")
-    ):
-        raise RuntimeError("Could not build app icon.")
+    icon = build_icon(ROOT)
     command = [
         sys.executable,
         "-m",

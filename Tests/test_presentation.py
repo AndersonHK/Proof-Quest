@@ -100,7 +100,7 @@ def test_failed_feedback_red_and_time_removed(qt, make_dataset, tmp_path, monkey
     w.elapsed_base = 11862
     w.finish_exam()
     w.show_question(0)
-    assert "#542d3b" in w.explanation.styleSheet() and "197:42" not in w.banner.text()
+    assert "#49301e" in w.explanation.styleSheet() and "197:42" not in w.banner.text()
     assert not w.explanation.text().startswith("Not this time.")
     first = w.explanation.text()
     w.show_question(1)
