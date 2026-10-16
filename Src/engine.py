@@ -189,6 +189,22 @@ class History:
         ).fetchone()
         return (json.loads(row[0]), json.loads(row[1]), row[2]) if row else None
 
+    def is_personal_best(self, result):
+        """Strict percentage record in this dataset's history; ties do not celebrate."""
+        right, total = result["correct"], result["total"]
+        if total <= 0 or right <= 0:
+            return False
+        for (saved,) in self.db.execute(
+            "SELECT result FROM runs WHERE status='completed'"
+        ):
+            previous = json.loads(saved)
+            if (
+                previous["total"] > 0
+                and right * previous["total"] <= previous["correct"] * total
+            ):
+                return False
+        return True
+
     def runs(self):
         rows = self.db.execute(
             "SELECT id,created,status,seconds,result FROM runs ORDER BY created DESC"

@@ -29,6 +29,56 @@ def run_smoke(window, path, application, audible=False):
             "settings_file": str(window.settings.path),
             "has_audio": window.listen.data is not None,
         }
+
+        def failed():
+            path.write_text(
+                json.dumps({"passed": False, "error": traceback.format_exc()}),
+                encoding="utf-8",
+            )
+            window.close()
+            application.exit(1)
+
+        def finish_mascot():
+            # Exercise the actual packaged Qt timers and atlas resources.
+            window.tabs.setCurrentIndex(0)
+
+            def review_ready():
+                try:
+                    assert window.journey.state == "review"
+                    window.show_question(
+                        (window.current + 1) % len(window.exam["questions"])
+                    )
+
+                    def sip_ready():
+                        try:
+                            if len(window.exam["questions"]) > 1:
+                                assert window.mascot.pose_override == "sip"
+                            window.grab().save(str(path.parent / "mascot-review.png"))
+                            window.new_exam()
+
+                            def home_ready():
+                                try:
+                                    assert window.journey.state == "home"
+                                    assert window.mascot.pose_override is None
+                                    result["mascot_round_trip"] = True
+                                    path.write_text(
+                                        json.dumps(result, indent=2), encoding="utf-8"
+                                    )
+                                    window.close()
+                                    application.quit()
+                                except Exception:
+                                    failed()
+
+                            QTimer.singleShot(1800, home_ready)
+                        except Exception:
+                            failed()
+
+                    QTimer.singleShot(400, sip_ready)
+                except Exception:
+                    failed()
+
+            QTimer.singleShot(3600, review_ready)
+
         if window.listen.data:
             listener = window.listen
             listener.refresh_outputs()
@@ -44,9 +94,8 @@ def run_smoke(window, path, application, audible=False):
                     result["audio_muted"] = listener.audio.isMuted()
                     result["audio_device"] = listener.audio.device().description()
                     result["audio_volume"] = listener.audio.volume()
-                    path.write_text(json.dumps(result, indent=2), encoding="utf-8")
-                    window.close()
-                    application.quit()
+                    listener.player.pause()
+                    finish_mascot()
                 except Exception:
                     path.write_text(
                         json.dumps({"passed": False, "error": traceback.format_exc()}),
@@ -57,9 +106,7 @@ def run_smoke(window, path, application, audible=False):
 
             QTimer.singleShot(1200, finish_audio)
         else:
-            path.write_text(json.dumps(result, indent=2), encoding="utf-8")
-            window.close()
-            application.quit()
+            finish_mascot()
     except Exception:
         path.write_text(
             json.dumps({"passed": False, "error": traceback.format_exc()}),

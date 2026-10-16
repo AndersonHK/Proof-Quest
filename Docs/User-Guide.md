@@ -2,7 +2,7 @@
 
 Proof Quest practices recall with randomized exams and helps review material through synchronized audio. It works offline after installation and never uploads your answers.
 
-Fable is the fox in the header and application icon. The violet/plum/cream palette comes from its artwork. It blinks occasionally and gives a brief watchful glance during graded review; click Fable to preview the check-in. The motions are intentionally quiet. Green still identifies correct answers and red still marks missed-answer explanations.
+Fable is the fox in the header and application icon. The violet/plum/cream palette comes from its artwork. It blinks while you practice and winks when you select an answer, regardless of correctness. On finishing, it walks off the left edge and returns from the right carrying a mug, settling beneath Regenerate test. Changing the reviewed question starts a short sip. Regenerating sends it off to the right and back into the header without the mug. Click Fable in the header to preview the wink. A new personal-best percentage for the active dataset starts with a small paws-up cheer and sparse confetti from both sides, angled about 30 degrees upward. The first nonzero completed result establishes a record; equal scores and abandoned runs do not trigger another celebration. Records compare percentages across all run sizes and chapter filters for that dataset. The motions are intentionally quiet and never block controls. Green still identifies correct answers and red still marks missed-answer explanations.
 
 ## Install and update
 

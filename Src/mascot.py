@@ -10,10 +10,41 @@ from PySide6.QtWidgets import QWidget
 class Fable(QWidget):
     def __init__(self, assets, size=84):
         super().__init__()
+        self.setAttribute(Qt.WA_NoSystemBackground)
+        self.setStyleSheet("background: transparent;")
         self.frames = {
             name: QPixmap(str(assets / (name + ".png")))
             for name in ("neutral", "half", "blink", "peek")
         }
+        self.sources = {name: QRectF(150, 100, 1000, 1100) for name in self.frames}
+        for atlas_name, names in [
+            (
+                "routine",
+                ["mug", "lift", "sip", "content", "walk0", "walk1", "walk2", "walk3"],
+            ),
+            (
+                "celebration",
+                [
+                    "ready",
+                    "cheer",
+                    "hooray",
+                    "unused",
+                    "carry0",
+                    "carry1",
+                    "carry2",
+                    "carry3",
+                ],
+            ),
+        ]:
+            atlas = QPixmap(str(assets / (atlas_name + ".png")))
+            for i, name in enumerate(names):
+                self.frames[name] = atlas
+                self.sources[name] = QRectF(
+                    (i % 4) * atlas.width() / 4,
+                    (i // 4) * atlas.height() / 2,
+                    atlas.width() / 4,
+                    atlas.height() / 2,
+                )
         if any(frame.isNull() for frame in self.frames.values()):
             raise RuntimeError("Fable artwork is missing from the application bundle.")
         self.setFixedSize(size, size)
@@ -23,6 +54,10 @@ class Fable(QWidget):
         self.started = time.monotonic()
         self.reaction = None
         self.preview_time = None
+        self.pose_override = None
+        self.flip = False
+        self.lift = 0.0
+        self.squash = 1.0
         self.timer = QTimer(self)
         self.timer.setInterval(33)
         self.timer.timeout.connect(self.update)
@@ -63,7 +98,7 @@ class Fable(QWidget):
             else time.monotonic() - self.started
         )
         reaction = None if self.reaction is None else time.monotonic() - self.reaction
-        pose = self.pose_at(elapsed, reaction)
+        pose = self.pose_override or self.pose_at(elapsed, reaction)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.SmoothPixmapTransform)
         # Native rendering transforms leave the image-generated PNG artwork untouched.
@@ -71,13 +106,18 @@ class Fable(QWidget):
         width = self.width()
         height = self.height()
         painter.translate(width / 2, height * 0.94)
-        painter.scale(1, scale)
+        painter.scale(1, scale * self.squash)
         painter.translate(-width / 2, -height * 0.94)
-        target_width = height * 1000 / 1100
+        painter.translate(0, -self.lift)
+        if self.flip:
+            painter.translate(width, 0)
+            painter.scale(-1, 1)
+        source = self.sources[pose]
+        target_width = height * source.width() / source.height()
         painter.drawPixmap(
             QRectF((width - target_width) / 2, 0, target_width, height),
             self.frames[pose],
-            QRectF(150, 100, 1000, 1100),
+            source,
         )
 
     def showEvent(self, event):

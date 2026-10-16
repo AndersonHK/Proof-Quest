@@ -63,6 +63,7 @@ def configure_fonts(app):
 
 from theme import STYLE
 from mascot import Fable
+from mascot_scene import FableJourney
 
 
 def label(text, name=None):
@@ -106,7 +107,9 @@ class Trainer(QMainWindow):
         outer.setContentsMargins(20, 14, 20, 14)
         top = QHBoxLayout()
         self.mascot = Fable(ROOT / "Assets" / "Fable")
-        top.addWidget(self.mascot)
+        self.mascot_home = QWidget()
+        self.mascot_home.setFixedSize(84, 84)
+        top.addWidget(self.mascot_home)
         wordmark = QVBoxLayout()
         wordmark.setSpacing(2)
         wordmark.addWidget(label("PROOF QUEST", "brand"))
@@ -138,6 +141,9 @@ class Trainer(QMainWindow):
         self.progress = QWidget()
         self.tabs.addTab(self.progress, "↗  Your progress")
         self.build_progress()
+        self.journey = FableJourney(
+            shell, self.mascot, self.mascot_home, self.mascot_review, self.practice
+        )
         self.tabs.currentChanged.connect(self.tab_changed)
         self.statusBar().showMessage(
             "Answers save automatically. Choose carefully. Fable is judging. Affectionately."
@@ -218,7 +224,13 @@ class Trainer(QMainWindow):
         self.banner = label(
             "Pick a challenge. Every fresh run reshuffles the evidence.", "banner"
         )
-        layout.addWidget(self.banner)
+        banner_row = QHBoxLayout()
+        banner_row.addWidget(self.banner, 1)
+        self.mascot_review = QWidget()
+        self.mascot_review.setFixedSize(84, 84)
+        self.mascot_review.hide()
+        banner_row.addWidget(self.mascot_review)
+        layout.addLayout(banner_row)
         split = QSplitter()
         layout.addWidget(split, 1)
         side = QWidget()
@@ -357,6 +369,7 @@ class Trainer(QMainWindow):
         self.exam["dataset_id"] = self.dataset.id
         self.exam["dataset_title"] = self.dataset.title
         self.history.begin(self.exam)
+        self.journey.regenerated()
         self.fill_sidebar()
         self.show_question(0)
         self.banner.setText(
@@ -391,6 +404,7 @@ class Trainer(QMainWindow):
     def show_question(self, index):
         if not self.exam or not 0 <= index < len(self.exam["questions"]):
             return
+        changed = index != self.current
         self.current = index
         q = self.exam["questions"][index]
         self.stack.setCurrentIndex(0)
@@ -430,7 +444,8 @@ class Trainer(QMainWindow):
             if row["unanswered"]:
                 verdict = "Left unanswered. " + verdict
             self.explanation.setText(verdict + " " + q["explanation"])
-            self.mascot.check_in()
+            if changed:
+                self.journey.question_changed()
             if row["correct"]:
                 self.explanation.setStyleSheet(
                     "QLabel {background:#193a3b;color:#b6f1df;border:1px solid #4a8a72;border-radius:10px;padding:16px;}"
@@ -522,6 +537,7 @@ class Trainer(QMainWindow):
             return
         before = self.answers.get(str(self.current))
         self.answers[str(self.current)] = index
+        self.journey.answer_selected()
         self.history.save(
             self.exam,
             self.answers,
@@ -550,6 +566,8 @@ class Trainer(QMainWindow):
         self.show_question(min(len(self.exam["questions"]) - 1, self.current + 1))
 
     def finish_exam(self):
+        if self.result or self.read_only:
+            return
         missing = len(self.exam["questions"]) - len(self.answers)
         if (
             missing
@@ -564,6 +582,7 @@ class Trainer(QMainWindow):
             return
         self.elapsed_base = self.elapsed()
         self.started = 0
+        personal_best = self.history.is_personal_best(grade(self.exam, self.answers))
         self.result = self.history.finish(self.exam, self.answers, self.elapsed_base)
         self.fill_sidebar()
         self.show_question(self.current)
@@ -585,6 +604,10 @@ class Trainer(QMainWindow):
         self.banner.setText(
             f"{right} correct · {n-right} to revisit · {pct}% · {flavor}"
         )
+        if personal_best:
+            self.banner.setText(self.banner.text() + " New personal best!")
+        self.journey.finished(personal_best)
+        self.schedule_fit()
 
     def build_report(self):
         e = html.escape
@@ -851,7 +874,7 @@ class Trainer(QMainWindow):
         self.save_timer.stop()
         self.save_timer.deleteLater()
         self.listen.shutdown()
-        self.mascot.shutdown()
+        self.journey.shutdown()
         self.history.close()
         previous = self.takeCentralWidget()
         previous.deleteLater()
@@ -879,7 +902,7 @@ class Trainer(QMainWindow):
             QMessageBox.warning(self, "Settings could not be saved", str(error))
         self.save_timer.stop()
         self.listen.shutdown()
-        self.mascot.shutdown()
+        self.journey.shutdown()
         self.history.close()
         event.accept()
 
