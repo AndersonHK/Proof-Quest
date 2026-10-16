@@ -1,6 +1,12 @@
 """Audio playback uses the media clock and service word timestamps, never guessed WPM."""
 
-import bisect, json
+import bisect, json, os, sys
+
+# Qt 6.8's FFmpeg resampler rejects some Windows headset channel masks and can
+# advance the clock while emitting silence. Native WMF playback avoids that path.
+# This changes this process only and leaves an explicit developer override intact.
+if sys.platform == "win32":
+    os.environ.setdefault("QT_MEDIA_BACKEND", "windows")
 from pathlib import Path
 from PySide6.QtCore import Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import (
@@ -11,7 +17,8 @@ from PySide6.QtGui import (
     QTextCharFormat,
     QTextCursor,
 )
-from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
+from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer, QMediaDevices
+from widgets import JumpSlider
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -59,6 +66,9 @@ class Listening(QWidget):
         self.audio = QAudioOutput(self)
         self.player.setAudioOutput(self.audio)
         self.audio.setVolume(0.75)
+        self.audio.setMuted(False)
+        self.devices = QMediaDevices(self)
+        self.preferred_output = "system"
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 20, 24, 20)
         layout.setSpacing(14)
@@ -87,11 +97,11 @@ class Listening(QWidget):
         self.rate.activated.connect(
             lambda: self.player.setPlaybackRate(self.rate.currentData())
         )
-        self.volume = QSlider(Qt.Horizontal)
+        self.volume = JumpSlider(Qt.Horizontal)
         self.volume.setRange(0, 100)
         self.volume.setValue(75)
-        self.volume.setMaximumWidth(110)
-        self.volume.valueChanged.connect(lambda v: self.audio.setVolume(v / 100))
+        self.volume.setFixedWidth(110)
+        self.volume.valueChanged.connect(self.set_volume)
         for w in [
             self.play,
             back,
@@ -104,11 +114,24 @@ class Listening(QWidget):
             controls.addWidget(w)
         controls.addStretch()
         layout.addLayout(controls)
+        routing = QHBoxLayout()
+        routing.addWidget(QLabel("Audio output"))
+        self.output = QComboBox()
+        self.output.setMinimumWidth(300)
+        self.output.activated.connect(self.choose_output)
+        routing.addWidget(self.output, 1)
+        self.output_status = QLabel("")
+        routing.addWidget(self.output_status)
+        layout.addLayout(routing)
+        self.devices.audioOutputsChanged.connect(self.refresh_outputs)
+        self.refresh_outputs()
         timeline = QHBoxLayout()
         self.time = QLabel("00:00 / 00:00")
         self.time.setMinimumWidth(130)
-        self.slider = QSlider(Qt.Horizontal)
-        self.slider.sliderReleased.connect(lambda: self.seek(self.slider.value()))
+        self.slider = JumpSlider(Qt.Horizontal)
+        self.slider.valueCommitted.connect(self.seek)
+        self.slider.setSingleStep(5000)
+        self.slider.setPageStep(30000)
         timeline.addWidget(self.time)
         timeline.addWidget(self.slider)
         layout.addLayout(timeline)
@@ -220,7 +243,66 @@ class Listening(QWidget):
         if self.player.isPlaying():
             self.player.pause()
         else:
+            self.refresh_outputs()
+            if self.audio.device().isNull():
+                self.output_status.setText(
+                    "No output device available. Connect speakers or headphones."
+                )
+                return
+            self.audio.setMuted(False)
+            self.audio.setVolume(self.volume.value() / 100)
             self.player.play()
+
+    def set_volume(self, value):
+        self.audio.setMuted(False)
+        self.audio.setVolume(value / 100)
+        if hasattr(self, "output_status"):
+            self.output_status.setText("Volume is zero" if value == 0 else "")
+
+    def choose_output(self, index):
+        self.preferred_output = self.output.itemData(index) or "system"
+        self.apply_output()
+
+    def restore_output(self, identifier):
+        self.preferred_output = identifier
+        self.refresh_outputs()
+
+    def refresh_outputs(self):
+        available = QMediaDevices.audioOutputs()
+        default = QMediaDevices.defaultAudioOutput()
+        self.output.blockSignals(True)
+        self.output.clear()
+        self.output.addItem(
+            "System default — " + (default.description() or "unavailable"), "system"
+        )
+        for device in available:
+            self.output.addItem(device.description(), bytes(device.id()).hex())
+        selected = self.output.findData(self.preferred_output)
+        if selected < 0:
+            self.preferred_output = "system"
+            selected = 0
+            self.output_status.setText(
+                "Previous device unavailable; using system default."
+            )
+        self.output.setCurrentIndex(selected)
+        self.output.blockSignals(False)
+        self.apply_output()
+
+    def apply_output(self):
+        device = QMediaDevices.defaultAudioOutput()
+        if self.preferred_output != "system":
+            device = next(
+                (
+                    d
+                    for d in QMediaDevices.audioOutputs()
+                    if bytes(d.id()).hex() == self.preferred_output
+                ),
+                device,
+            )
+        if self.audio.device() != device:
+            self.audio.setDevice(device)
+        if device.isNull():
+            self.output_status.setText("No output device available.")
 
     def seek(self, ms):
         if not self.data:

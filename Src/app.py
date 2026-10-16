@@ -1,7 +1,7 @@
 from __future__ import annotations
 import argparse, html, json, os, random, sys, time
 from pathlib import Path
-from PySide6.QtCore import Qt, QTimer, QUrl
+from PySide6.QtCore import Qt, QTimer, QUrl, QRect
 from PySide6.QtGui import (
     QDesktopServices,
     QIcon,
@@ -44,6 +44,7 @@ from engine import History, generate, grade
 from dataset import Dataset, DatasetError
 from settings import Settings, resources_directory
 from widgets import AnswerChoice
+from presentation import Feedback, display_answers
 from player import Listening, clock
 
 ROOT = resources_directory()
@@ -114,6 +115,8 @@ class Trainer(QMainWindow):
 
     def initialize_dataset(self, dataset):
         self.dataset = dataset
+        self.feedback = Feedback()
+        self._fit_pending = False
         self.setWindowTitle("Proof Quest — " + dataset.title)
         self.resize(
             self.settings.get("window_width", 1240),
@@ -207,7 +210,7 @@ class Trainer(QMainWindow):
                 "Sprint · 12",
                 "Balanced · 40",
                 "Deep dive · 80",
-                "Full bank",
+                f'Full bank · {len(self.bank["questions"])}',
                 "Weak-topic sprint · 20",
                 "Custom",
             ]
@@ -217,9 +220,10 @@ class Trainer(QMainWindow):
         self.count = QSpinBox()
         self.count.setRange(1, len(self.bank["questions"]))
         self.count.setValue(40)
-        self.count.setEnabled(False)
+        self.count.setKeyboardTracking(False)
         config.addWidget(self.count)
         self.mode.currentIndexChanged.connect(self.mode_changed)
+        self.count.valueChanged.connect(self.count_edited)
         config.addStretch()
         self.regenerate = QPushButton("↻ Regenerate test")
         self.regenerate.clicked.connect(self.new_exam)
@@ -272,9 +276,11 @@ class Trainer(QMainWindow):
         split.addWidget(self.stack)
         split.setStretchFactor(1, 1)
         scroll = QScrollArea()
+        self.question_scroll = scroll
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
         card = QWidget()
+        self.question_card = card
         self.card_layout = QVBoxLayout(card)
         self.card_layout.setContentsMargins(18, 12, 18, 12)
         self.card_layout.setSpacing(9)
@@ -325,8 +331,14 @@ class Trainer(QMainWindow):
 
     def mode_changed(self, index):
         values = [12, 40, 80, len(self.bank["questions"]), 20, self.count.value()]
+        self.count.blockSignals(True)
         self.count.setValue(values[index])
-        self.count.setEnabled(index == 5)
+        self.count.blockSignals(False)
+
+    def count_edited(self, value):
+        self.mode.blockSignals(True)
+        self.mode.setCurrentIndex(5)
+        self.mode.blockSignals(False)
 
     def elapsed(self):
         return self.elapsed_base + (
@@ -422,11 +434,14 @@ class Trainer(QMainWindow):
         self.prompt.setText(q["prompt"])
         self.group.setExclusive(False)
         pick = self.answers.get(str(index))
+        answers = display_answers(
+            [o["text"] for o in q["options"]], q.get("answer_format")
+        )
         for j, (radio, opt) in enumerate(zip(self.options, q["options"])):
-            radio.setText(f'{j+1}.  {opt["text"]}')
+            radio.setText(f"{j+1}.  {answers[j]}")
             radio.setChecked(j == pick)
             radio.setEnabled(not self.result and not self.read_only)
-            radio.setToolTip(opt["text"])
+            radio.setToolTip(answers[j])
             radio.setStyleSheet("")
             if self.result:
                 if opt["correct"]:
@@ -439,14 +454,19 @@ class Trainer(QMainWindow):
                     )
         self.group.setExclusive(True)
         self.explanation.setVisible(bool(self.result))
+        self.explanation.setStyleSheet("")
         if self.result:
             row = self.result["rows"][index]
-            verdict = (
-                "Correct."
-                if row["correct"]
-                else ("Unanswered." if row["unanswered"] else "Not this time.")
-            )
+            verdict = self.feedback.phrase((self.exam["id"], index), row["correct"])
+            if row["unanswered"]:
+                verdict = "Left unanswered. " + verdict
             self.explanation.setText(verdict + " " + q["explanation"])
+            if not row["correct"]:
+                self.explanation.setStyleSheet(
+                    "QLabel {background:#542d3b;color:#ffd8df;border:1px solid #d97c91;border-radius:10px;padding:16px;}"
+                )
+        else:
+            self.explanation.setText(q["explanation"])
         self.previous.setEnabled(index > 0)
         self.next.setEnabled(index < len(self.exam["questions"]) - 1)
         self.clear.setVisible(not self.result and not self.read_only)
@@ -456,6 +476,72 @@ class Trainer(QMainWindow):
             self.history.save(
                 self.exam, self.answers, self.elapsed(), ("visit", {"index": index})
             )
+        self.schedule_fit()
+
+    def schedule_fit(self):
+        if not self._fit_pending:
+            self._fit_pending = True
+            QTimer.singleShot(0, self.fit_question_height)
+
+    def fit_question_height(self, available=None):
+        self._fit_pending = False
+        if (
+            not self.isVisible()
+            or self.isMaximized()
+            or self.isFullScreen()
+            or self.stack.currentIndex() != 0
+            or self.tabs.currentWidget() != self.practice
+        ):
+            return
+        screen = available or self.screen().availableGeometry()
+        self.card_layout.invalidate()
+        self.card_layout.activate()
+        width = self.question_scroll.viewport().width()
+        required = self.card_layout.totalHeightForWidth(width)
+        if required < 0:
+            required = self.card_layout.sizeHint().height()
+        # Reserve room for the review notification even before the exam is graded.
+        if not self.result:
+            inner = max(100, width - 68)
+            height = (
+                self.explanation.fontMetrics()
+                .boundingRect(
+                    QRect(0, 0, inner, 100000),
+                    Qt.TextWordWrap,
+                    self.explanation.text() + " Here is the key distinction.",
+                )
+                .height()
+            )
+            required += height + 44
+        needed = self.height() + max(
+            0, required - self.question_scroll.viewport().height() + 4
+        )
+        frame_extra = max(0, self.frameGeometry().height() - self.height())
+        limit = max(1, screen.height() - frame_extra)
+        self.setMinimumHeight(min(700, limit))
+        target = min(needed, limit)
+        if target != self.height():
+            self.resize(self.width(), target)
+            top = max(
+                screen.top(),
+                min(
+                    self.frameGeometry().top(),
+                    screen.bottom() - self.frameGeometry().height() + 1,
+                ),
+            )
+            self.move(self.x(), top)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.schedule_fit()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if (
+            hasattr(self, "question_scroll")
+            and event.size().width() != event.oldSize().width()
+        ):
+            self.schedule_fit()
 
     def select_answer(self, index):
         if self.result or self.read_only:
@@ -523,7 +609,7 @@ class Trainer(QMainWindow):
             )
         )
         self.banner.setText(
-            f"{right}/{n} correct · {pct}% · {clock(self.elapsed_base*1000)} · {flavor}"
+            f"{right} correct · {n-right} to revisit · {pct}% · {flavor}"
         )
 
     def build_report(self):
@@ -533,12 +619,13 @@ class Trainer(QMainWindow):
             f'<h1>{r["correct"]} / {r["total"]} correct</h1><p>Green is the correct answer. Select any question in the sidebar to inspect all five choices.</p>'
         ]
         for row, q in zip(r["rows"], self.exam["questions"]):
-            selected = (
-                "Unanswered"
-                if row["selected"] is None
-                else q["options"][row["selected"]]["text"]
+            answers = display_answers(
+                [o["text"] for o in q["options"]], q.get("answer_format")
             )
-            correct = q["options"][row["correct_index"]]["text"]
+            selected = (
+                "Unanswered" if row["selected"] is None else answers[row["selected"]]
+            )
+            correct = answers[row["correct_index"]]
             parts.append(
                 f'<h3><a style="color:#8ce0c7" href="q:{row["index"]}">{"✓" if row["correct"] else "✕"} {row["index"]+1}. {e(q["prompt"])}</a></h3>'
             )
@@ -547,8 +634,13 @@ class Trainer(QMainWindow):
             parts.append(
                 f'<p style="background:#215044;color:#d5ffef;padding:8px">Correct: {e(correct)}</p>'
             )
+            color = "#b6f1df" if row["correct"] else "#ffd8df"
+            background = "#193a3b" if row["correct"] else "#542d3b"
+            phrase = self.feedback.phrase(
+                (self.exam["id"], row["index"]), row["correct"]
+            )
             parts.append(
-                f'<p>{e(q["explanation"])}</p><p style="color:#8ca2bc">Source {e(q["source"])} · {e(q["topic"])}</p><hr>'
+                f'<p style="color:{color};background:{background};padding:12px">{e(phrase)} {e(q["explanation"])}</p><p style="color:#8ca2bc">Source {e(q["source"])} · {e(q["topic"])}</p><hr>'
             )
         self.report.setHtml("".join(parts))
 
@@ -691,6 +783,9 @@ class Trainer(QMainWindow):
         e = html.escape
         parts = [f'<h1>{result["correct"]}/{result["total"]} · {e(r["status"])}</h1>']
         for item, q in zip(result["rows"], exam["questions"]):
+            answers = display_answers(
+                [o["text"] for o in q["options"]], q.get("answer_format")
+            )
             parts.append(f'<h3>{item["index"]+1}. {e(q["prompt"])}</h3>')
             for j, opt in enumerate(q["options"]):
                 color = (
@@ -699,9 +794,10 @@ class Trainer(QMainWindow):
                     else "#ffb3c1" if item["selected"] == j else "#bbc9dc"
                 )
                 parts.append(
-                    f'<p style="color:{color}">{"✓ " if opt["correct"] else ""}{"[selected] " if item["selected"]==j else ""}{e(opt["text"])}</p>'
+                    f'<p style="color:{color}">{"✓ " if opt["correct"] else ""}{"[selected] " if item["selected"]==j else ""}{e(answers[j])}</p>'
                 )
-            parts.append(f'<p>{e(q["explanation"])}</p><hr>')
+            color = "#b6f1df" if item["correct"] else "#ffd8df"
+            parts.append(f'<p style="color:{color}">{e(q["explanation"])}</p><hr>')
         browser.setHtml("".join(parts))
         dialog.exec()
 
@@ -727,6 +823,7 @@ class Trainer(QMainWindow):
             [c.property("chapter_id") for c in self.chapter_checks if c.isChecked()],
         )
         self.settings.set("volume", self.listen.volume.value())
+        self.settings.set("audio_output", self.listen.preferred_output)
         self.settings.set("playback_rate", self.listen.rate.currentData())
         self.settings.set("follow_narration", self.listen.follow.isChecked())
         self.settings.set(
@@ -750,6 +847,7 @@ class Trainer(QMainWindow):
             for c in self.chapter_checks:
                 c.setChecked(True)
         self.listen.volume.setValue(self.settings.get("volume", 75))
+        self.listen.restore_output(self.settings.get("audio_output", "system"))
         rate = self.listen.rate.findData(self.settings.get("playback_rate", 1))
         self.listen.rate.setCurrentIndex(max(0, rate))
         self.listen.player.setPlaybackRate(self.listen.rate.currentData())
@@ -821,6 +919,11 @@ def main():
         type=Path,
         help="Write a scripted executable validation receipt and exit",
     )
+    parser.add_argument(
+        "--audible-audio",
+        action="store_true",
+        help="Play the audio segment aloud during an explicit smoke test",
+    )
     args = parser.parse_args()
     app = QApplication(sys.argv)
     configure_fonts(app)
@@ -864,7 +967,10 @@ def main():
     if args.smoke_test:
         from smoke import run_smoke
 
-        QTimer.singleShot(500, lambda: run_smoke(window, args.smoke_test, app))
+        QTimer.singleShot(
+            500,
+            lambda: run_smoke(window, args.smoke_test, app, audible=args.audible_audio),
+        )
     return app.exec()
 
 

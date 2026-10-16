@@ -1,8 +1,10 @@
 # Private course content and source material never belong in a release.
 /Datasets/
 /Private/
+/Local/
 /Out/
 /Artifacts/
+/Dist/*.tmp
 **/Logs/
 **/logs/
 **/proofquest.ini
@@ -15,5 +17,5 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-# Dist contains the single current runnable release by explicit user request.
+# Dist contains the single current runnable ZIP by explicit user request.
 # Do not add broad executable/DLL ignores that break the committed app bundle.

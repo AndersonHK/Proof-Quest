@@ -4,7 +4,9 @@ Proof Quest is a local Python desktop study app with randomized multiple-choice 
 
 ## Run
 
-Open [Dist/ProofQuest/ProofQuest.exe](Dist/ProofQuest/ProofQuest.exe). Keep the entire `Dist/ProofQuest` folder together; Python is not required for the packaged app.
+Download [Dist/ProofQuest-win-x64.zip](Dist/ProofQuest-win-x64.zip), extract it completely, and run `ProofQuest/ProofQuest.exe`. The ZIP contains everything needed, including the demo and its default INI. Keep `_internal` beside the EXE. Python is not required to run the packaged app.
+
+For personal use and local testing in this repository, run `python Scripts/install_local.py`, then open `Local/ProofQuest/ProofQuest.exe`. `Local/` is Git-ignored. Updating that installation preserves your settings and practice history. `Dist/` contains only the shareable ZIP and is tracked.
 
 Click **Select new dataset** and choose its `dataset.json`. The **Help** button explains practice, grading, playback, and dataset selection. The initial release includes a small original demo. Private course datasets are external and ignored by Git.
 
@@ -32,7 +34,8 @@ The build script does not install dependencies. [Build and validation](Docs/Deve
 | `Tests/`, `Scripts/` | Regression tests, build and validation tools |
 | `Assets/` | Original application badge |
 | `Docs/` | Indexed current documentation |
-| `Dist/ProofQuest/` | Current tracked executable and required runtime files |
+| `Dist/ProofQuest-win-x64.zip` | Single tracked distribution with demo defaults and all runtime files |
+| `Local/ProofQuest/` | Ignored personal installation and local testing runtime |
 | `Datasets/`, `Private/` | Ignored private educational inputs and derived material |
 | `Out/` | Ignored build intermediates, test receipts, screenshots |
 

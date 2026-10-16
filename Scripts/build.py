@@ -3,36 +3,9 @@
 import hashlib, importlib.metadata, json, os, platform, shutil, subprocess, sys
 from pathlib import Path
 
+from distribution import ARCHIVE_NAME, create_archive, write_demo_settings
+
 ROOT = Path(__file__).resolve().parents[1]
-
-
-def publish(staging, destination):
-    """Replace managed release files, preserving adjacent INI, logs, and datasets."""
-    staging, destination = Path(staging).resolve(), Path(destination).resolve()
-    destination.mkdir(parents=True, exist_ok=True)
-    new_files = {
-        p.relative_to(staging).as_posix() for p in staging.rglob("*") if p.is_file()
-    }
-    receipt = destination / "release-manifest.json"
-    previous = (
-        json.loads(receipt.read_text(encoding="utf-8")).get("files", [])
-        if receipt.exists()
-        else []
-    )
-    for relative in previous:
-        path = (destination / relative).resolve()
-        allowed = Path(relative).parts[0] in {"_internal", "Licenses"} or relative in {
-            "ProofQuest.exe",
-            "THIRD-PARTY-NOTICES.md",
-        }
-        if (
-            allowed
-            and path.is_relative_to(destination)
-            and relative not in new_files
-            and path.is_file()
-        ):
-            path.unlink()
-    shutil.copytree(staging, destination, dirs_exist_ok=True)
 
 
 def main():
@@ -121,6 +94,14 @@ def main():
             "\n".join(line.rstrip() for line in text.splitlines()).rstrip() + "\n"
         )
         path.write_bytes(normalized.encode("utf-8"))
+    write_demo_settings(release)
+    (release / "START-HERE.txt").write_text(
+        "PROOF QUEST\n\nExtract this entire folder, then run ProofQuest.exe.\n"
+        "No Python installation is required. Keep _internal beside the EXE.\n"
+        "The sample demo is selected automatically. Use Help or Select new dataset.\n"
+        "Settings and progress are stored beside the EXE; use a writable folder.\n",
+        encoding="utf-8",
+    )
     hashes = {
         str(p.relative_to(ROOT))
         .replace("\\", "/"): hashlib.sha256(p.read_bytes().replace(b"\r\n", b"\n"))
@@ -147,9 +128,9 @@ def main():
     (release / "release-manifest.json").write_text(
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
     )
-    destination = ROOT / "Dist" / "ProofQuest"
-    publish(release, destination)
-    print("Built", destination / "ProofQuest.exe")
+    destination = ROOT / "Dist" / ARCHIVE_NAME
+    create_archive(release, destination)
+    print("Built distributable:", destination)
 
 
 if __name__ == "__main__":

@@ -1,15 +1,16 @@
 # Current release validation
 
-The initial standalone release is version 0.2.0 for Windows x64. The release manifest beside the executable records its source hashes, interpreter/runtime versions, and executable hash. It contains the original demo only; the personal course dataset is external.
+The current release is version 0.2.2 for Windows x64. `Dist/ProofQuest-win-x64.zip` contains the entire runnable bundle and a public INI selecting its original demo. The internal release manifest records source hashes, runtime versions, executable hash, and the file inventory. Personal use and testing take place in ignored `Local/ProofQuest/`.
 
 ## Checks
 
-- Fifteen automated tests cover schema consistency, answer-pool sampling, grading, SQLite restart, dataset isolation, invalid input rejection, settings round trips, dataset switching, Help, long Unicode content, and preservation of private settings/history during release refresh.
+- Thirty-six automated tests cover schema consistency, answer sampling/formatting, grading, persistence, dataset switching, Help, long Unicode content, ZIP/privacy boundaries, migration, window fitting, editable run counts, rotating feedback, red corrections, direct-click sliders, and audio-device selection.
 - Synthetic coverage includes 32 chapters, question text longer than 5,000 characters, and supplementary Unicode characters in timestamp-to-cursor mapping.
-- The packaged executable smoke test opens the bundled demo, answers and grades all questions correctly, saves INI/history in an isolated directory, captures the interface, and exits successfully.
-- A separate executable smoke test loads the ignored personal dataset and checks grading plus actual muted media-clock progression. Its content and detailed receipt are not committed.
+- The ZIP is extracted to an isolated location and its executable smoke test opens the bundled demo, grades all questions correctly, saves INI/history, captures the interface, and exits successfully without invoking a Python interpreter.
+- The installed local executable is also tested with the ignored personal dataset and checks grading plus actual muted media-clock progression. Test history is isolated from personal history. Private content and detailed receipts are not committed.
+- An unmuted Windows audio-session probe reproduces the FFmpeg backend's unsupported headset channel-layout failure, then verifies nonzero session output with the native Windows backend. The player also rebinds to the current system default or an explicitly selected device. A moving playback clock alone is not accepted as evidence of sound output.
 - Practice and graded-report screenshots are visually inspected. Raw screenshots, test receipts, and build logs stay under ignored `Out/`.
-- The staged-file and release-resource audits exclude private datasets, recordings, source generators, logs, and INI settings. The committed runtime resource whitelist is application assets, current documentation, schemas, and the original demo.
+- The staged-file and ZIP audits exclude private datasets, recordings, source generators, logs, and personal settings. The sole distribution INI is the canonical demo default. ZIP integrity, its executable hash, file inventory, and bundled demo identity are checked.
 
 These checks establish behavior on the development Windows 10 x64 environment. Other Windows versions and machines have not been separately tested. Service-generated word boundaries provide synchronization; audio-device latency may vary between machines. The release is unsigned and has not been published to a remote.
 

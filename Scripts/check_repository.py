@@ -1,7 +1,8 @@
 """Check relative doc links, staged private paths, and release resource boundaries."""
 
-import argparse, json, re, subprocess, sys
+import argparse, json, re, subprocess, sys, zipfile
 from pathlib import Path
+from distribution import ARCHIVE_NAME, inspect_archive
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -36,29 +37,37 @@ def main():
         parts = Path(value).parts
         if (
             any(
-                x.lower() in {"datasets", "private", "logs", "out", ".venv"}
+                x.lower() in {"datasets", "private", "local", "logs", "out", ".venv"}
                 for x in parts
             )
             or Path(value).name.lower() == "proofquest.ini"
         ):
             errors.append("Private/generated path staged: " + value)
-    release = ROOT / "Dist" / "ProofQuest"
-    if release.exists():
-        for path in release.rglob("*"):
-            relative = path.relative_to(release)
-            if any(x.lower() in {"datasets", "private"} for x in relative.parts):
-                errors.append("Private release content: " + str(relative))
-            if (
-                path.name in ["questions.json", "dataset.json"]
-                and "Demo" not in relative.parts
-            ):
-                errors.append("Non-demo dataset bundled: " + str(relative))
-            if path.suffix.lower() in {".mp3", ".wav", ".docx", ".pdf"}:
-                errors.append("Unexpected source/media in release: " + str(relative))
+    release = ROOT / "Dist" / ARCHIVE_NAME
+    if not release.is_file():
+        errors.append("Missing distributable ZIP.")
+    else:
+        try:
+            inspect_archive(release)
+            with zipfile.ZipFile(release) as archive:
+                for name in ("dataset.json", "questions.json"):
+                    bundled = json.loads(
+                        archive.read("ProofQuest/_internal/Examples/Demo/" + name)
+                    )
+                    original = json.loads(
+                        (ROOT / "Examples" / "Demo" / name).read_text(encoding="utf-8")
+                    )
+                    if bundled != original:
+                        errors.append("Bundled demo differs from the original: " + name)
+        except (OSError, ValueError, KeyError, zipfile.BadZipFile) as error:
+            errors.append(str(error))
+    for path in (ROOT / "Dist").iterdir():
+        if path.name != ARCHIVE_NAME:
+            errors.append("Unexpected loose content in Dist: " + path.name)
     if errors:
         print("\n".join(errors))
         return 1
-    print("Documentation links, staged paths, and release resource boundaries passed.")
+    print("Documentation links, staged privacy boundaries, and demo ZIP checks passed.")
     return 0
 
 

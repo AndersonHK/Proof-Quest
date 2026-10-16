@@ -4,6 +4,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+from presentation import FORMATS, parse_answer, display_answers
 
 
 class DatasetError(ValueError):
@@ -82,6 +83,19 @@ def validate_bank(bank, chapter_ids=None):
             len({a.strip().casefold() for a in answers}) == len(answers),
             f'{q["id"]}: duplicate/overlapping answer text.',
         )
+        kind = q.get("answer_format")
+        if kind is not None:
+            require(kind in FORMATS, f'{q["id"]}: unknown answer_format.')
+            require(
+                all(parse_answer(a, kind) is not None for a in answers),
+                f'{q["id"]}: answer does not match answer_format.',
+            )
+            correct = display_answers(q["correct"], kind)
+            wrong = display_answers(q["wrong"], kind)
+            require(
+                len(set(wrong)) == len(wrong) and not set(correct) & set(wrong),
+                f'{q["id"]}: formatted choices collide.',
+            )
     return bank
 
 

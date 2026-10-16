@@ -6,7 +6,7 @@ from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QMessageBox
 
 
-def run_smoke(window, path, application):
+def run_smoke(window, path, application, audible=False):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -31,7 +31,8 @@ def run_smoke(window, path, application):
         }
         if window.listen.data:
             listener = window.listen
-            listener.audio.setMuted(True)
+            listener.refresh_outputs()
+            listener.audio.setMuted(not audible)
             listener.seek(10000)
             listener.player.play()
             before = listener.player.position()
@@ -40,6 +41,9 @@ def run_smoke(window, path, application):
                 try:
                     assert listener.player.position() > before + 100
                     result["media_clock_advanced"] = True
+                    result["audio_muted"] = listener.audio.isMuted()
+                    result["audio_device"] = listener.audio.device().description()
+                    result["audio_volume"] = listener.audio.volume()
                     path.write_text(json.dumps(result, indent=2), encoding="utf-8")
                     window.close()
                     application.quit()

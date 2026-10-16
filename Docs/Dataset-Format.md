@@ -34,8 +34,11 @@ The bank is an object containing a nonempty `version` string and a nonempty `que
 | `correct` | At least two distinct valid answer formulations |
 | `wrong` | At least eight distinct incorrect alternatives |
 | `explanation` | Why the correct answer is correct |
+| `answer_format` | Optional uniform display notation: `number`, `set`, `truth_column`, `complexity`, or `property_list` |
 
 Each run selects one member of `correct` and four members of `wrong`. Equivalent correct formulations may appear in the pool but never together in an exam. No answer text may be duplicated or overlap between pools after trimming and case-folding. Source references are displayed as plain text. Questions, answers, and explanations may contain Unicode, line breaks, and long text; answer cards wrap instead of truncating.
+
+Use one presentation style throughout each question's answer pool. Avoid mixing bare numbers or sets with phrases such as “The value is” or “The resulting set is.” With `answer_format`, the loader checks that all answers match the specified notation, that formatted distractors are distinct, and that none collide with a formatted correct answer. Correct formulations such as `7` and `7.0` can share the same canonical display because only one correct alternative is sampled. The engine saves consistent display strings in new snapshots. Older saved runs are formatted for viewing only when every displayed choice matches one narrowly recognized notation; the original log text and answer indexes remain unchanged.
 
 ## Audio and word timing
 

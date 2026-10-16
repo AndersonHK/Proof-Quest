@@ -6,6 +6,7 @@ import json
 import random
 import sqlite3
 import uuid
+from presentation import display_answers
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -84,6 +85,11 @@ def generate(bank, count=40, chapters=None, seed=None, weaknesses=None):
         options = [{"text": rng.choice(q["correct"]), "correct": True}]
         options += [{"text": x, "correct": False} for x in rng.sample(q["wrong"], 4)]
         rng.shuffle(options)
+        formatted = display_answers(
+            [option["text"] for option in options], q.get("answer_format")
+        )
+        for option, text in zip(options, formatted):
+            option["text"] = text
         questions.append(
             {
                 **{k: v for k, v in q.items() if k not in ("correct", "wrong")},
