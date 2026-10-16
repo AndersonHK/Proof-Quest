@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.2",
   "questions": [
     {
       "id": "demo-1",
@@ -22,7 +22,8 @@
         "cube",
         "sphere"
       ],
-      "explanation": "The requested term is triangle. This small original dataset demonstrates the question format."
+      "explanation": "A triangle is a polygon with three sides.",
+      "hint": "Think about the number of sides and corners, not the drawing’s size or rotation."
     },
     {
       "id": "demo-2",
@@ -45,7 +46,8 @@
         "cone",
         "sphere"
       ],
-      "explanation": "The requested term is square. This small original dataset demonstrates the question format."
+      "explanation": "A square has four equal sides and four right angles.",
+      "hint": "Think about the number of sides and corners, not the drawing’s size or rotation."
     },
     {
       "id": "demo-3",
@@ -68,7 +70,8 @@
         "black",
         "yellow"
       ],
-      "explanation": "The requested term is blue. This small original dataset demonstrates the question format."
+      "explanation": "The usual color name for a clear daytime sky is blue.",
+      "hint": "Picture an ordinary clear sky well after sunrise. The question is about its appearance, rather than a sunset or a cloudy day."
     },
     {
       "id": "demo-4",
@@ -91,7 +94,12 @@
         "white",
         "gray"
       ],
-      "explanation": "The requested term is orange. This small original dataset demonstrates the question format."
+      "explanation": "Red and yellow paint combine to make orange in this paint-mixing example.",
+      "hint": "Picture mixing the pigments named in the question. Distinguish the starting colors from the resulting color."
     }
-  ]
+  ],
+  "topic_hints": {
+    "Shapes": "Compare the defining sides and angles. A drawing’s size and rotation do not change the kind of shape.",
+    "Colors": "Picture the specific scene or materials in the question. Similar-looking names need not describe the same color."
+  }
 }

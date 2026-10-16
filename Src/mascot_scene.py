@@ -3,7 +3,7 @@
 import math
 import random
 import time
-from PySide6.QtCore import QObject, QPoint, QPointF, QTimer, Qt
+from PySide6.QtCore import QObject, QPoint, QPointF, QTimer, Qt, Signal
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import QWidget
 
@@ -57,6 +57,7 @@ class Confetti(QWidget):
 
 
 class FableJourney(QObject):
+    arrived_review = Signal()
     DURATIONS = {
         "celebrate": 1.8,
         "exit_left": 0.65,
@@ -74,6 +75,8 @@ class FableJourney(QObject):
         self.since = now()
         self.sip_since = None
         self.blink_since = None
+        self.talk_since = None
+        self.talk_duration = 2.4
         self.return_start = None
         self.return_mug = True
         self.effects = Confetti(shell)
@@ -87,6 +90,18 @@ class FableJourney(QObject):
 
     def point(self, anchor):
         return QPointF(anchor.mapTo(self.shell, QPoint(0, 0)))
+
+    def sipping(self):
+        return (
+            self.state == "review"
+            and self.sip_since is not None
+            and self.now() - self.sip_since < 1.5
+        )
+
+    def talk(self, duration=2.4):
+        if not self.sipping():
+            self.talk_since = self.now()
+            self.talk_duration = duration
 
     def begin(self, state, at=None):
         self.state = state
@@ -121,6 +136,7 @@ class FableJourney(QObject):
             self.tick()
 
     def regenerated(self):
+        self.talk_since = None
         if self.state == "home":
             self.mascot.reaction = None
             return
@@ -152,6 +168,8 @@ class FableJourney(QObject):
                 "enter_home": "home",
             }[self.state]
             self.begin(next_state, at)
+            if next_state == "review":
+                self.arrived_review.emit()
             if next_state == "home":
                 self.review.hide()
         t = now - self.since
@@ -213,6 +231,19 @@ class FableJourney(QObject):
             fox.flip = True
         if self.state in ("exit_left", "enter_review", "exit_right", "enter_home"):
             fox.lift = 1.3 * abs(math.sin(t * math.tau * 6))
+        talking = None if self.talk_since is None else now - self.talk_since
+        blink = self.blink_since is not None and 0 <= now - self.blink_since < 0.3
+        if (
+            talking is not None
+            and 0 <= talking < self.talk_duration
+            and not self.sipping()
+            and not blink
+        ):
+            if self.state in ("home", "review"):
+                mouth = (0, 1, 2, 1, 3, 1, 0, 2)[int(talking * 10) % 8]
+                fox.pose_override = (
+                    f"{'mugtalk' if self.state == 'review' else 'talk'}{mouth}"
+                )
         # Review poses belong to Practice; never float over the transcript.
         visible = self.shell.isVisible() and (
             self.state == "home" or self.practice.isVisible()

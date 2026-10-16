@@ -21,6 +21,19 @@ class Fable(QWidget):
         self.sources = {name: QRectF(150, 100, 1000, 1100) for name in self.frames}
         for atlas_name, names in [
             (
+                "talking",
+                [
+                    "talk0",
+                    "talk1",
+                    "talk2",
+                    "talk3",
+                    "mugtalk0",
+                    "mugtalk1",
+                    "mugtalk2",
+                    "mugtalk3",
+                ],
+            ),
+            (
                 "routine",
                 ["mug", "lift", "sip", "content", "walk0", "walk1", "walk2", "walk3"],
             ),
@@ -51,7 +64,7 @@ class Fable(QWidget):
             raise RuntimeError("Fable artwork is missing from the application bundle.")
         self.setFixedSize(size, size)
         self.setAccessibleName("Fable, your fox study companion")
-        self.setToolTip("Fable is judging. Affectionately. Click for a check-in.")
+        self.setToolTip("Click to chat; click again for a hint. With the mug, click for a blink.")
         self.setCursor(Qt.PointingHandCursor)
         self.started = time.monotonic()
         self.reaction = None

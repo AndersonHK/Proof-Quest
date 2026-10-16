@@ -84,6 +84,8 @@ def validate_bank(bank, chapter_ids=None):
             f'{q["id"]}: duplicate/overlapping answer text.',
         )
         kind = q.get("answer_format")
+        if "hint" in q:
+            require(nonempty(q["hint"]), f'{q["id"]}: hint must be nonempty text.')
         if "distractor_sets" in q:
             sets = q["distractor_sets"]
             require(
@@ -110,6 +112,13 @@ def validate_bank(bank, chapter_ids=None):
                 len(set(wrong)) == len(wrong) and not set(correct) & set(wrong),
                 f'{q["id"]}: formatted choices collide.',
             )
+    if "topic_hints" in bank:
+        hints = bank["topic_hints"]
+        require(
+            isinstance(hints, dict)
+            and all(nonempty(k) and nonempty(v) for k, v in hints.items()),
+            "topic_hints must map topic names to nonempty text.",
+        )
     return bank
 
 

@@ -41,4 +41,8 @@ The build script does not install dependencies. [Build and validation](Docs/Deve
 | `Datasets/`, `Private/` | Ignored private educational inputs and derived material |
 | `Out/` | Ignored build intermediates, test receipts, screenshots |
 
-See [AGENTS.md](AGENTS.md) for contributor instructions and [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for runtime provenance. This initial repository has no remote configured. The executable is an unsigned local build; release evidence is in [Validation](Docs/Validation.md).
+See [AGENTS.md](AGENTS.md) for contributor instructions and [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for runtime provenance. The executable is an unsigned local build; release evidence is in [Validation](Docs/Validation.md).
+
+## License
+
+Proof Quest is released under the [MIT license](LICENSE), copyright © 2026 Anderson Klein. Bundled third-party components retain their own licenses; see [third-party notices](THIRD-PARTY-NOTICES.md). External datasets retain their authors’ licenses and are not included.

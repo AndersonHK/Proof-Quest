@@ -1,7 +1,7 @@
-"""Consistent answer notation and non-repeating review feedback."""
+"""Consistent answer notation and direct explanation copy."""
 
-import random
 import re
+import random
 from decimal import Decimal, InvalidOperation
 
 POSITIVE = (
@@ -19,18 +19,18 @@ POSITIVE = (
     "Point earned.",
 )
 NEGATIVE = (
-    "A useful mistake to catch.",
+    "Not quite.",
     "One to revisit.",
-    "Here is the missing piece.",
-    "A small course correction.",
-    "This one needs another look.",
-    "Let us untangle this.",
-    "A detour, not a dead end.",
-    "Here is what makes the answer work.",
-    "Another clue for next time.",
-    "Close the gap with this idea.",
-    "A good spot to sharpen your recall.",
-    "Here is the key distinction.",
+    "Give it another go.",
+    "Worth a second look.",
+    "Back to the scratchpad.",
+    "One for the retry pile.",
+    "Try again after a breather.",
+    "A useful mistake to catch.",
+    "Keep at it.",
+    "Let's try that again.",
+    "Still in the game.",
+    "Next time.",
 )
 
 
@@ -52,6 +52,16 @@ class Feedback:
             self.previous[correct] = value
             self.cache[key] = value
         return self.cache[key]
+
+
+def explanation_text(text, unanswered=False, reaction=""):
+    """Keep short reactions; omit headings that merely announce an explanation."""
+    prefix = (
+        "Not attempted · excluded from scoring.\n"
+        if unanswered
+        else (reaction + " " if reaction else "")
+    )
+    return prefix + text
 
 
 def parse_answer(text, kind):

@@ -50,6 +50,13 @@ def main():
         try:
             inspect_archive(release)
             with zipfile.ZipFile(release) as archive:
+                for notice in ("LICENSE", "THIRD-PARTY-NOTICES.md"):
+                    if archive.read("ProofQuest/" + notice).replace(b"\r\n", b"\n") != (
+                        ROOT / notice
+                    ).read_bytes().replace(b"\r\n", b"\n"):
+                        errors.append(
+                            "Bundled license/notice differs from source: " + notice
+                        )
                 for name in ("dataset.json", "questions.json"):
                     bundled = json.loads(
                         archive.read("ProofQuest/_internal/Examples/Demo/" + name)

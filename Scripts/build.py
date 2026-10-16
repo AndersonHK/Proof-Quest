@@ -76,6 +76,7 @@ def main():
     if python_license.exists():
         shutil.copy2(python_license, licenses / "Python-LICENSE.txt")
     shutil.copy2(ROOT / "THIRD-PARTY-NOTICES.md", release / "THIRD-PARTY-NOTICES.md")
+    shutil.copy2(ROOT / "LICENSE", release / "LICENSE")
     if (ROOT / "ThirdParty" / "Licenses").exists():
         shutil.copytree(
             ROOT / "ThirdParty" / "Licenses",
@@ -105,6 +106,10 @@ def main():
         for p in (ROOT / folder).rglob("*")
         if p.is_file() and "__pycache__" not in p.parts
     }
+    for name in ("LICENSE", "THIRD-PARTY-NOTICES.md", "VERSION"):
+        hashes[name] = hashlib.sha256(
+            (ROOT / name).read_bytes().replace(b"\r\n", b"\n")
+        ).hexdigest()
     manifest = {
         "version": (ROOT / "VERSION").read_text().strip(),
         "python": platform.python_version(),

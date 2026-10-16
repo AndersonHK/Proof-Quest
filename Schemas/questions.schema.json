@@ -82,6 +82,10 @@
                 "minimum": 0
               }
             }
+          },
+          "hint": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
@@ -95,6 +99,13 @@
           "correct",
           "wrong"
         ]
+      }
+    },
+    "topic_hints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
       }
     }
   },

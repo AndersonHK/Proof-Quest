@@ -44,7 +44,7 @@ from engine import History, generate, grade
 from dataset import Dataset, DatasetError
 from settings import Settings, resources_directory
 from widgets import AnswerChoice
-from presentation import Feedback, display_answers
+from presentation import Feedback, display_answers, explanation_text
 from player import Listening, clock
 
 ROOT = resources_directory()
@@ -64,6 +64,7 @@ def configure_fonts(app):
 from theme import STYLE, EXPLANATIONS, explanation_style
 from mascot import Fable
 from mascot_scene import FableJourney
+from speech import SpeechBubble, SpeechDirector
 
 
 def label(text, name=None):
@@ -112,9 +113,12 @@ class Trainer(QMainWindow):
         top.addWidget(self.mascot_home)
         wordmark = QVBoxLayout()
         wordmark.setSpacing(2)
-        wordmark.addWidget(label("PROOF QUEST", "brand"))
+        self.brand_label = label("PROOF QUEST", "brand")
+        wordmark.addWidget(self.brand_label)
         wordmark.addWidget(label("A little logic. A familiar fox.", "brandSub"))
         top.addLayout(wordmark)
+        self.speech_home = SpeechBubble(shell, tail="left")
+        self.speech_home.hide()
         top.addStretch()
         self.xp = label("A little logic. A lot less panic.", "xp")
         self.xp.setWordWrap(False)
@@ -144,9 +148,10 @@ class Trainer(QMainWindow):
         self.journey = FableJourney(
             shell, self.mascot, self.mascot_home, self.mascot_review, self.practice
         )
+        self.speech = SpeechDirector(self, self.speech_home, self.speech_review)
         self.tabs.currentChanged.connect(self.tab_changed)
         self.statusBar().showMessage(
-            "Answers save automatically. Choose carefully. Fable is judging. Affectionately."
+            "Answers save automatically. Choose carefully. Fable is judging."
         )
         for i in range(5):
             shortcut = QShortcut(QKeySequence(str(i + 1)), self.practice)
@@ -224,10 +229,12 @@ class Trainer(QMainWindow):
         chapter_scroll.setWidget(chapter_widget)
         layout.addWidget(chapter_scroll)
         self.banner = label(
-            "Pick a challenge. Every fresh run reshuffles the evidence.", "banner"
+            "Choose chapters and a question count, then regenerate the test.", "banner"
         )
         banner_row = QHBoxLayout()
         banner_row.addWidget(self.banner, 1)
+        self.speech_review = SpeechBubble(tail="right")
+        self.speech_review.hide()
         self.mascot_review = QWidget()
         self.mascot_review.setFixedSize(84, 84)
         self.mascot_review.hide()
@@ -371,11 +378,12 @@ class Trainer(QMainWindow):
         self.exam["dataset_id"] = self.dataset.id
         self.exam["dataset_title"] = self.dataset.title
         self.history.begin(self.exam)
+        self.speech.reset()
         self.journey.regenerated()
         self.fill_sidebar()
         self.show_question(0)
         self.banner.setText(
-            f'{len(self.exam["questions"])} questions · One correct choice each · No hints until you finish. Take your time. Fable is keeping you company.'
+            f'{len(self.exam["questions"])} questions · One correct choice each · Click Fable for a hint.'
         )
         self.refresh_stats()
 
@@ -412,6 +420,8 @@ class Trainer(QMainWindow):
             return
         changed = index != self.current
         self.current = index
+        if changed:
+            self.speech.question_changed()
         q = self.exam["questions"][index]
         self.stack.setCurrentIndex(0)
         self.sidebar.blockSignals(True)
@@ -446,18 +456,23 @@ class Trainer(QMainWindow):
         self.explanation.setStyleSheet("")
         if self.result:
             row = self.result["rows"][index]
-            verdict = self.feedback.phrase((self.exam["id"], index), row["correct"])
-            if row["unanswered"]:
-                verdict = "Not attempted. This question did not affect your score."
-            self.explanation.setText(verdict + " " + q["explanation"])
-            if changed:
-                self.journey.question_changed()
-            heading = (
-                "For review"
+            self.explanation.setText(
+                explanation_text(
+                    q["explanation"],
+                    row["unanswered"],
+                    self.feedback.phrase(
+                        (self.exam["id"], row["index"]), row["correct"]
+                    ),
+                )
+            )
+            self.explanation.setAccessibleName(
+                "Not attempted"
                 if row["unanswered"]
                 else EXPLANATIONS[bool(row["correct"])][3]
             )
-            self.explanation.setText(heading + " · " + self.explanation.text())
+            self.explanation.setAccessibleDescription(q["explanation"])
+            if changed:
+                self.journey.question_changed()
             self.explanation.setStyleSheet(
                 explanation_style(row["correct"] or row["unanswered"])
             )
@@ -504,7 +519,7 @@ class Trainer(QMainWindow):
                 .boundingRect(
                     QRect(0, 0, inner, 100000),
                     Qt.TextWordWrap,
-                    self.explanation.text() + " Here is the key distinction.",
+                    self.explanation.text(),
                 )
                 .height()
             )
@@ -588,6 +603,7 @@ class Trainer(QMainWindow):
         ):
             return
         self.elapsed_base = self.elapsed()
+        self.speech.reset()
         self.started = 0
         personal_best = self.history.is_personal_best(grade(self.exam, self.answers))
         self.result = self.history.finish(self.exam, self.answers, self.elapsed_base)
@@ -599,18 +615,9 @@ class Trainer(QMainWindow):
         n = self.result["total"]
         right = self.result["correct"]
         pct = round(100 * right / n) if n else None
-        flavor = (
-            "A proof well played."
-            if pct is not None and pct >= 90
-            else (
-                "The induction is gaining momentum."
-                if pct is not None and pct >= 65
-                else "Counterexamples located. Now you know where to train."
-            )
-        )
         self.banner.setText(
             f"{right} correct · {n-right} incorrect · {self.result['unanswered']} not attempted · "
-            + (f"{pct}% · {flavor}" if pct is not None else "No scored answers.")
+            + (f"{pct}%" if pct is not None else "No scored answers.")
         )
         if personal_best:
             self.banner.setText(self.banner.text() + " New personal best!")
@@ -634,25 +641,25 @@ class Trainer(QMainWindow):
             parts.append(
                 f'<h3><a style="color:#c6a8ff" href="q:{row["index"]}">{"—" if row["unanswered"] else "✓" if row["correct"] else "✕"} {row["index"]+1}. {e(q["prompt"])}</a></h3>'
             )
-            if not row["correct"]:
+            if not row["correct"] and not row["unanswered"]:
                 parts.append(f'<p style="color:#ffb3c1">Your answer: {e(selected)}</p>')
             parts.append(
                 f'<p style="background:#215044;color:#d5ffef;padding:8px">Correct: {e(correct)}</p>'
             )
-            color, background, _, heading = EXPLANATIONS[
+            color, background, _, _ = EXPLANATIONS[
                 bool(row["correct"] or row["unanswered"])
             ]
-            if row["unanswered"]:
-                heading = "Not attempted · excluded from scoring"
-            phrase = (
-                ""
-                if row["unanswered"]
-                else self.feedback.phrase(
-                    (self.exam["id"], row["index"]), row["correct"]
+            explanation = e(
+                explanation_text(
+                    q["explanation"],
+                    row["unanswered"],
+                    self.feedback.phrase(
+                        (self.exam["id"], row["index"]), row["correct"]
+                    ),
                 )
-            )
+            ).replace("\n", "<br>")
             parts.append(
-                f'<p style="color:{color};background:{background};padding:12px">{e(heading)} · {e(phrase)} {e(q["explanation"])}</p><p style="color:#baaacf">Source {e(q["source"])} · {e(q["topic"])}</p><hr>'
+                f'<p style="color:{color};background:{background};padding:12px">{explanation}</p><p style="color:#baaacf">Source {e(q["source"])} · {e(q["topic"])}</p><hr>'
             )
         self.report.setHtml("".join(parts))
 
@@ -664,7 +671,7 @@ class Trainer(QMainWindow):
         layout = QVBoxLayout(self.progress)
         layout.setContentsMargins(24, 20, 24, 20)
         layout.setSpacing(16)
-        layout.addWidget(label("Your evidence board", "title"))
+        layout.addWidget(label("Your progress", "title"))
         self.stats_label = label("")
         layout.addWidget(self.stats_label)
         layout.addWidget(
@@ -722,7 +729,7 @@ class Trainer(QMainWindow):
             + (
                 f"{100*right/total:.0f}% overall"
                 if total
-                else "Your first run starts the story."
+                else "No attempted answers yet."
             )
         )
         all_topics = sorted(
@@ -808,13 +815,18 @@ class Trainer(QMainWindow):
                 parts.append(
                     f'<p style="color:{color}">{"✓ " if opt["correct"] else ""}{"[selected] " if item["selected"]==j else ""}{e(answers[j])}</p>'
                 )
-            color, background, _, heading = EXPLANATIONS[
+            color, background, _, _ = EXPLANATIONS[
                 bool(item["correct"] or item["unanswered"])
             ]
-            if item["unanswered"]:
-                heading = "Not attempted · excluded from scoring"
+            explanation = e(
+                explanation_text(
+                    q["explanation"],
+                    item["unanswered"],
+                    self.feedback.phrase((r["id"], item["index"]), item["correct"]),
+                )
+            ).replace("\n", "<br>")
             parts.append(
-                f'<p style="color:{color};background:{background}">{e(heading)} · {e(q["explanation"])}</p><hr>'
+                f'<p style="color:{color};background:{background}">{explanation}</p><hr>'
             )
         browser.setHtml("".join(parts))
         dialog.exec()
@@ -895,6 +907,7 @@ class Trainer(QMainWindow):
         self.save_timer.stop()
         self.save_timer.deleteLater()
         self.listen.shutdown()
+        self.speech.shutdown()
         self.journey.shutdown()
         self.history.close()
         previous = self.takeCentralWidget()
@@ -923,6 +936,7 @@ class Trainer(QMainWindow):
             QMessageBox.warning(self, "Settings could not be saved", str(error))
         self.save_timer.stop()
         self.listen.shutdown()
+        self.speech.shutdown()
         self.journey.shutdown()
         self.history.close()
         event.accept()

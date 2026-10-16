@@ -21,7 +21,7 @@ Omit `audio` for a question-only dataset. Each chapter must have at least one qu
 
 ## Question bank
 
-The bank is an object containing a nonempty `version` string and a nonempty `questions` array. Every question has these fields:
+The bank is an object containing a nonempty `version` string and a nonempty `questions` array. Optional `topic_hints` maps topic names to nonempty study notes. A question’s `hint` takes precedence over its topic note. Hints are authored data, never executable code; review them independently of answer explanations. Every question has these fields:
 
 | Field | Meaning |
 |---|---|
@@ -34,6 +34,7 @@ The bank is an object containing a nonempty `version` string and a nonempty `que
 | `correct` | At least two distinct valid answer formulations |
 | `wrong` | At least eight distinct incorrect alternatives |
 | `explanation` | Why the correct answer is correct |
+| `hint` | Optional nonempty topic/approach note that does not reveal the final answer |
 | `distractor_sets` | Optional nonempty list of approved four-index combinations into `wrong`; each combination must contain four distinct valid indexes |
 | `answer_format` | Optional uniform display notation: `number`, `set`, `truth_column`, `complexity`, or `property_list` |
 

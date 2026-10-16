@@ -275,6 +275,51 @@ class History:
                 t["right"] += int(item["correct"])
         return dict(topics), completed
 
+    def question_performance(self, question_id, current_run):
+        """Attempts through this completed run; blanks/abandonments never break a streak."""
+        attempts = []
+        current_correct = None
+        current_hinted = False
+        for run_id, raw in self.db.execute(
+            "SELECT id,result FROM runs WHERE status='completed' ORDER BY created,id"
+        ):
+            result = normalize_result(json.loads(raw))
+            row = next(
+                (r for r in result["rows"] if r["question_id"] == question_id), None
+            )
+            if row is not None and row["selected"] is not None:
+                hinted = any(
+                    json.loads(payload).get("question_id") == question_id
+                    for (payload,) in self.db.execute(
+                        "SELECT payload FROM events WHERE run_id=? AND kind='hint'",
+                        (run_id,),
+                    )
+                )
+                attempts.append((bool(row["correct"]), hinted))
+                if run_id == current_run:
+                    current_correct = bool(row["correct"])
+                    current_hinted = hinted
+            if run_id == current_run:
+                break
+        streak = 0
+        streak_hinted = 0
+        for right, hinted in reversed(attempts):
+            if not right:
+                break
+            streak += 1
+            streak_hinted += int(hinted)
+        total_right = sum(right for right, _ in attempts)
+        return {
+            "attempts": len(attempts),
+            "right": total_right,
+            "streak": streak,
+            "streak_hinted": streak_hinted,
+            "hinted_attempts": sum(h for _, h in attempts),
+            "current_correct": current_correct,
+            "current_hinted": current_hinted,
+            "first_correct": current_correct is True and total_right == 1,
+        }
+
     def export(self, path):
         out = []
         for r in self.runs():

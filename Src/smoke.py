@@ -7,6 +7,33 @@ from PySide6.QtWidgets import QMessageBox
 
 
 def run_smoke(window, path, application, audible=False):
+    """Check the real click-to-hint path before exercising the exam lifecycle."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    def continue_exam():
+        try:
+            assert window.speech_home.isVisible()
+            assert window.speech_home.text.startswith("Hint · ")
+            assert window.speech_home.opacity > 0.99
+            window.grab().save(str(path.parent / "hint.png"))
+            run_exam_smoke(window, path, application, audible)
+        except Exception:
+            path.write_text(
+                json.dumps({"passed": False, "error": traceback.format_exc()}),
+                encoding="utf-8",
+            )
+            window.close()
+            application.exit(1)
+
+    window.mascot.clicked.emit()
+    window.mascot.clicked.emit()
+    QTimer.singleShot(
+        round(1000 * (window.speech_home.reveal_seconds + 0.2)), continue_exam
+    )
+
+
+def run_exam_smoke(window, path, application, audible=False):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -28,6 +55,12 @@ def run_smoke(window, path, application, audible=False):
             "score": window.result["correct"],
             "settings_file": str(window.settings.path),
             "has_audio": window.listen.data is not None,
+            "hint_event_logged": bool(
+                window.history.db.execute(
+                    "SELECT 1 FROM events WHERE run_id=? AND kind='hint'",
+                    (window.exam["id"],),
+                ).fetchone()
+            ),
         }
 
         def failed():

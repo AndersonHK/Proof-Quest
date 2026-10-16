@@ -9,8 +9,8 @@ MUTED = "#baaacf"
 
 # Explanation panels are informational, separate from green/red answer grading.
 EXPLANATIONS = {
-    True: ("#cfe8ff", "#20364f", "#83b8e8", "Why this is correct"),
-    False: ("#ffe0b2", "#49301e", "#e5aa64", "Review this step"),
+    True: ("#cfe8ff", "#20364f", "#83b8e8", "Correct"),
+    False: ("#ffe0b2", "#49301e", "#e5aa64", "Incorrect"),
 }
 
 

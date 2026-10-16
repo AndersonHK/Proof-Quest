@@ -7,7 +7,7 @@ from PySide6.QtMultimedia import QMediaDevices
 from app import Trainer
 from dataset import Dataset, DatasetError
 from engine import generate
-from presentation import Feedback, POSITIVE, NEGATIVE, display_answers
+from presentation import Feedback, POSITIVE, NEGATIVE, display_answers, explanation_text
 from settings import Settings
 from widgets import JumpSlider
 from player import Listening
@@ -42,13 +42,25 @@ def test_group_formatting_and_legacy_snapshots(answers, expected):
     assert answers == original
 
 
-def test_feedback_shuffles_without_repetition_and_stays_stable():
+def test_explanations_start_with_content():
+    content = "The range contains only the outputs attained by the function."
+    assert explanation_text(content) == content
+    assert (
+        explanation_text(content, reaction="Right on target.")
+        == "Right on target. " + content
+    )
+    assert explanation_text(content, True).endswith("\n" + content)
+    assert explanation_text(content, True).startswith("Not attempted")
+
+
+def test_feedback_retains_brief_reactions_without_meta_explanations():
+    assert "Right on target." in POSITIVE
     feedback = Feedback()
-    for correct, pool in [(True, POSITIVE), (False, NEGATIVE)]:
+    for correct, pool in ((True, POSITIVE), (False, NEGATIVE)):
         values = [feedback.phrase((correct, i), correct) for i in range(12)]
         assert len(set(values)) == 12 and set(values) == set(pool)
+        assert all("Here is" not in x and ", not " not in x for x in values)
         assert feedback.phrase((correct, 0), correct) == values[0]
-        assert feedback.phrase((correct, 12), correct) != values[-1]
 
 
 def test_formatted_fixture_validation_and_exam_generation(make_dataset):
@@ -87,7 +99,9 @@ def test_count_always_editable_and_presets_remain_presets(qt, make_dataset, tmp_
     w.close()
 
 
-def test_failed_feedback_red_and_time_removed(qt, make_dataset, tmp_path, monkeypatch):
+def test_explanation_is_direct_and_time_removed(
+    qt, make_dataset, tmp_path, monkeypatch
+):
     from PySide6.QtWidgets import QMessageBox
 
     monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.Yes)
@@ -101,7 +115,10 @@ def test_failed_feedback_red_and_time_removed(qt, make_dataset, tmp_path, monkey
     w.finish_exam()
     w.show_question(0)
     assert "#49301e" in w.explanation.styleSheet() and "197:42" not in w.banner.text()
-    assert not w.explanation.text().startswith("Not this time.")
+    assert w.explanation.text().endswith(w.exam["questions"][0]["explanation"])
+    assert any(w.explanation.text().startswith(phrase) for phrase in NEGATIVE)
+    assert "Why this is correct" not in w.report.toPlainText()
+    assert "Review this step" not in w.report.toPlainText()
     first = w.explanation.text()
     w.show_question(1)
     w.show_question(0)
