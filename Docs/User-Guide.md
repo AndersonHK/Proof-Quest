@@ -2,6 +2,8 @@
 
 Proof Quest practices recall with randomized exams and helps review material through synchronized audio. It works offline after installation and never uploads your answers.
 
+Fable is the fox in the header and application icon. The violet/plum/cream palette comes from its artwork. It blinks occasionally and gives a brief watchful glance during graded review; click Fable to preview the check-in. The motions are intentionally quiet. Green still identifies correct answers and red still marks missed-answer explanations.
+
 ## Install and update
 
 Extract the complete distribution ZIP to a writable folder and run `ProofQuest.exe` inside its `ProofQuest` folder. The EXE, `_internal` libraries/resources, sample demo, Help content, and demo-configured `proofquest.ini` are all included. Do not run the EXE inside the ZIP or move it away from its runtime folder.
@@ -30,7 +32,7 @@ Regenerating an unfinished run preserves it as abandoned after a prompt. Closing
 
 ## Listen
 
-Datasets with audio show it in **Listen + transcript**. Teal marks text already spoken; gold marks the current word. **Follow narration** scrolls with the recording. Uncheck it to browse without automatic scrolling.
+Datasets with audio show it in **Listen + transcript**. Soft plum marks text already spoken; warm gold marks the current word. **Follow narration** scrolls with the recording. Uncheck it to browse without automatic scrolling.
 
 Click a word to jump to its sentence's beginning. **Ctrl+F** focuses search; **Enter**, **Next match**, and **Previous match** find and jump through occurrences. Purple marks the found text. **Ctrl+Space** toggles playback. Volume, playback speed, section selection, and ten-second skip controls are available. Leaving the listening tab pauses playback.
 

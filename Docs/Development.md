@@ -2,6 +2,8 @@
 
 Proof Quest uses PySide6 widgets and Qt Multimedia. Dataset loading, settings, exam generation/history, playback, and the main window have separate source modules. [Dataset format](Dataset-Format.md) owns external content contracts; [User guide](User-Guide.md) owns visible behavior.
 
+`Src/theme.py` owns the Fable palette. The header XP counter remains an unboxed, content-sized label; button focus changes border color without changing layout geometry. `Src/mascot.py` renders the approved PNG poses from `Assets/Fable/`: neutral, half-lidded in-between, closed blink, and one-eye check-in. The animation renders at 30 fps with timed pose holds and a very small breathing transform; the check-in lasts 1.6 seconds. This is pose-based animation with generated intermediate eye artwork, not thirty unique drawings per second. Timers pause when the mascot is hidden. Built-in image-generation prompts are retained in `Assets/Fable/Prompts.txt`; third-party reference screenshots and rejected drafts are not shipped.
+
 ## Environment and checks
 
 Use an isolated environment and the pinned requirements. Setup commands in the root README are explicitly invoked installation steps; builds and tests do not change system packages or settings.

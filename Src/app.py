@@ -61,41 +61,8 @@ def configure_fonts(app):
     app.setFont(QFont("Segoe UI", 11))
 
 
-STYLE = """
-QWidget {background:#111b29;color:#e2e9f3;font-family:"Segoe UI";font-size:11pt;}
-QMainWindow {background:#0c1420;}
-QLabel#title {font-size:23pt;font-weight:700;color:#f4f7fb;}
-QLabel#brand {font-size:25pt;font-weight:750;color:#8ce0c7;}
-QLabel#muted {color:#95a8bf;font-size:10pt;}
-QLabel#prompt {font-size:16pt;font-weight:600;line-height:150%;}
-QLabel#banner {padding:16px;background:#193a3b;border-radius:10px;color:#b6f1df;}
-QFrame#card {background:#192638;border:1px solid #304258;border-radius:14px;}
-QPushButton {background:#24364b;border:1px solid #3d536b;border-radius:7px;padding:9px 15px;font-weight:600;}
-QPushButton:hover {background:#314b62;border-color:#8ce0c7;}
-QPushButton:disabled {color:#718096;background:#1a2735;}
-QPushButton#primary {background:#64c8ae;color:#102527;border-color:#64c8ae;}
-QPushButton#primary:disabled {background:#243a3e;color:#71908c;border-color:#354c50;}
-QPushButton#danger {color:#ffd3ab;border-color:#a26a44;}
-QListWidget,QTextBrowser,QTextEdit,QTableWidget {background:#152131;border:1px solid #304258;border-radius:8px;padding:8px;}
-QListWidget::item {padding:9px;border-radius:5px;}
-QListWidget::item:selected {background:#2c4c59;color:#ffffff;}
-QRadioButton {background:#203149;border:1px solid #3c506b;border-radius:8px;padding:13px;spacing:12px;}
-QRadioButton:hover {border-color:#8ce0c7;}
-QRadioButton:checked {background:#284c57;border:2px solid #8ce0c7;}
-QRadioButton::indicator {width:17px;height:17px;}
-QTabWidget::pane {border:0;}
-QTabBar::tab {padding:13px 25px;background:#172536;color:#a7b9cc;}
-QTabBar::tab:selected {background:#243c49;color:#a4f2d8;border-bottom:3px solid #8ce0c7;}
-QComboBox,QSpinBox,QLineEdit {background:#213146;border:1px solid #3d526a;border-radius:6px;padding:7px;}
-QComboBox QAbstractItemView {background:#213146;selection-background-color:#36605c;}
-QProgressBar {background:#23354a;border:0;border-radius:5px;height:14px;text-align:center;}
-QProgressBar::chunk {background:#64c8ae;border-radius:5px;}
-QHeaderView::section {background:#24384e;color:#dbe8f5;padding:8px;border:0;}
-QSlider::groove:horizontal {height:6px;background:#3a4a5c;}
-QSlider::handle:horizontal {background:#8ce0c7;width:14px;margin:-5px 0;border-radius:6px;}
-QTextEdit#transcript {font-size:14pt;padding:20px;selection-background-color:#4a3e70;}
-QToolTip {background:#22394b;color:white;border:1px solid #8ce0c7;}
-"""
+from theme import STYLE
+from mascot import Fable
 
 
 def label(text, name=None):
@@ -123,7 +90,7 @@ class Trainer(QMainWindow):
             self.settings.get("window_height", 860),
         )
         self.setMinimumSize(980, 700)
-        self.setWindowIcon(QIcon(str(ROOT / "Assets" / "badge.svg")))
+        self.setWindowIcon(QIcon(str(ROOT / "Assets" / "Fable" / "neutral.png")))
         self.bank = dataset.bank
         self.user_dir = self.settings.home / "Logs" / dataset.history_key
         self.history = History(self.user_dir / "practice.sqlite3")
@@ -138,16 +105,18 @@ class Trainer(QMainWindow):
         outer = QVBoxLayout(shell)
         outer.setContentsMargins(20, 14, 20, 14)
         top = QHBoxLayout()
-        mascot = QLabel()
-        mascot.setPixmap(QIcon(str(ROOT / "Assets" / "badge.svg")).pixmap(60, 60))
-        top.addWidget(mascot)
-        brand = label("PROOF QUEST", "brand")
-        top.addWidget(brand)
+        self.mascot = Fable(ROOT / "Assets" / "Fable")
+        top.addWidget(self.mascot)
+        wordmark = QVBoxLayout()
+        wordmark.setSpacing(2)
+        wordmark.addWidget(label("PROOF QUEST", "brand"))
+        wordmark.addWidget(label("A little logic. A familiar fox.", "brandSub"))
+        top.addLayout(wordmark)
         top.addStretch()
-        self.xp = label("A little logic. A lot less panic.", "muted")
-        self.xp.setMinimumWidth(280)
+        self.xp = label("A little logic. A lot less panic.", "xp")
+        self.xp.setWordWrap(False)
         self.xp.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        top.addWidget(self.xp)
+        top.addWidget(self.xp, 0, Qt.AlignRight | Qt.AlignVCenter)
         outer.addLayout(top)
         controls = QHBoxLayout()
         controls.addWidget(label(dataset.title, "muted"), 1)
@@ -171,7 +140,7 @@ class Trainer(QMainWindow):
         self.build_progress()
         self.tabs.currentChanged.connect(self.tab_changed)
         self.statusBar().showMessage(
-            "Answers save automatically. Choose carefully; the owl is judging no one."
+            "Answers save automatically. Choose carefully. Fable is judging. Affectionately."
         )
         for i in range(5):
             shortcut = QShortcut(QKeySequence(str(i + 1)), self.practice)
@@ -391,7 +360,7 @@ class Trainer(QMainWindow):
         self.fill_sidebar()
         self.show_question(0)
         self.banner.setText(
-            f'{len(self.exam["questions"])} questions · One correct choice each · No hints until you finish. Small steps. Stronger recall.'
+            f'{len(self.exam["questions"])} questions · One correct choice each · No hints until you finish. Take your time. Fable is keeping you company.'
         )
         self.refresh_stats()
 
@@ -461,6 +430,11 @@ class Trainer(QMainWindow):
             if row["unanswered"]:
                 verdict = "Left unanswered. " + verdict
             self.explanation.setText(verdict + " " + q["explanation"])
+            self.mascot.check_in()
+            if row["correct"]:
+                self.explanation.setStyleSheet(
+                    "QLabel {background:#193a3b;color:#b6f1df;border:1px solid #4a8a72;border-radius:10px;padding:16px;}"
+                )
             if not row["correct"]:
                 self.explanation.setStyleSheet(
                     "QLabel {background:#542d3b;color:#ffd8df;border:1px solid #d97c91;border-radius:10px;padding:16px;}"
@@ -627,7 +601,7 @@ class Trainer(QMainWindow):
             )
             correct = answers[row["correct_index"]]
             parts.append(
-                f'<h3><a style="color:#8ce0c7" href="q:{row["index"]}">{"✓" if row["correct"] else "✕"} {row["index"]+1}. {e(q["prompt"])}</a></h3>'
+                f'<h3><a style="color:#c6a8ff" href="q:{row["index"]}">{"✓" if row["correct"] else "✕"} {row["index"]+1}. {e(q["prompt"])}</a></h3>'
             )
             if not row["correct"]:
                 parts.append(f'<p style="color:#ffb3c1">Your answer: {e(selected)}</p>')
@@ -640,7 +614,7 @@ class Trainer(QMainWindow):
                 (self.exam["id"], row["index"]), row["correct"]
             )
             parts.append(
-                f'<p style="color:{color};background:{background};padding:12px">{e(phrase)} {e(q["explanation"])}</p><p style="color:#8ca2bc">Source {e(q["source"])} · {e(q["topic"])}</p><hr>'
+                f'<p style="color:{color};background:{background};padding:12px">{e(phrase)} {e(q["explanation"])}</p><p style="color:#baaacf">Source {e(q["source"])} · {e(q["topic"])}</p><hr>'
             )
         self.report.setHtml("".join(parts))
 
@@ -789,7 +763,7 @@ class Trainer(QMainWindow):
             parts.append(f'<h3>{item["index"]+1}. {e(q["prompt"])}</h3>')
             for j, opt in enumerate(q["options"]):
                 color = (
-                    "#8ce0c7"
+                    "#c6a8ff"
                     if opt["correct"]
                     else "#ffb3c1" if item["selected"] == j else "#bbc9dc"
                 )
@@ -877,6 +851,7 @@ class Trainer(QMainWindow):
         self.save_timer.stop()
         self.save_timer.deleteLater()
         self.listen.shutdown()
+        self.mascot.shutdown()
         self.history.close()
         previous = self.takeCentralWidget()
         previous.deleteLater()
@@ -904,6 +879,7 @@ class Trainer(QMainWindow):
             QMessageBox.warning(self, "Settings could not be saved", str(error))
         self.save_timer.stop()
         self.listen.shutdown()
+        self.mascot.shutdown()
         self.history.close()
         event.accept()
 

@@ -20,7 +20,7 @@ def main():
     app = QApplication.instance() or QApplication([])
     icon = out / "ProofQuest.ico"
     if (
-        not QIcon(str(ROOT / "Assets" / "badge.svg"))
+        not QIcon(str(ROOT / "Assets" / "Fable" / "neutral.png"))
         .pixmap(128, 128)
         .save(str(icon), "ICO")
     ):

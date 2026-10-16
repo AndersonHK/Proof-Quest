@@ -2,6 +2,8 @@
 
 Proof Quest is a local Python desktop study app with randomized multiple-choice exams, saved practice history, and an optional audio guide with a searchable word-synchronized transcript. It loads independent datasets for any subject and number of chapters.
 
+Fable, the violet fox, is the study companion. The interface uses violet actions, plum surfaces, and warm cream text, while green/red retain their grading meaning.
+
 ## Run
 
 Download [Dist/ProofQuest-win-x64.zip](Dist/ProofQuest-win-x64.zip), extract it completely, and run `ProofQuest/ProofQuest.exe`. The ZIP contains everything needed, including the demo and its default INI. Keep `_internal` beside the EXE. Python is not required to run the packaged app.
@@ -32,7 +34,7 @@ The build script does not install dependencies. [Build and validation](Docs/Deve
 | `Schemas/` | Versioned JSON schemas |
 | `Examples/Demo/` | Original synthetic public dataset |
 | `Tests/`, `Scripts/` | Regression tests, build and validation tools |
-| `Assets/` | Original application badge |
+| `Assets/Fable/` | Approved fox artwork, animation poses, and generation prompts |
 | `Docs/` | Indexed current documentation |
 | `Dist/ProofQuest-win-x64.zip` | Single tracked distribution with demo defaults and all runtime files |
 | `Local/ProofQuest/` | Ignored personal installation and local testing runtime |

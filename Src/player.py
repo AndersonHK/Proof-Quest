@@ -395,10 +395,10 @@ class Listening(QWidget):
         if i >= 0:
             start, end = self.word_ranges[i]
             selections.append(
-                self.selection(0, start if active else end, "#173f43", "#bde4dc")
+                self.selection(0, start if active else end, "#3b2856", "#eddefa")
             )
             if active:
-                selections.append(self.selection(start, end, "#e5be63", "#121d2a"))
+                selections.append(self.selection(start, end, "#f3ce8c", "#241733"))
             if self.follow.isChecked() and not self.search.hasFocus():
                 c = self.text.textCursor()
                 c.setPosition(start)
@@ -410,7 +410,7 @@ class Listening(QWidget):
                     bar = self.text.verticalScrollBar()
                     bar.setValue(bar.value() + int(y - h * 0.4))
         if self.match:
-            selections.append(self.selection(*self.match, "#4a3e70", "#ffffff"))
+            selections.append(self.selection(*self.match, "#684589", "#fff5e5"))
         self.text.setExtraSelections(selections)
 
     def shutdown(self):
