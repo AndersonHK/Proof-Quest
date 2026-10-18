@@ -880,7 +880,7 @@ class Trainer(QMainWindow):
         self.listen.restore_output(self.settings.get("audio_output", "system"))
         rate = self.listen.rate.findData(self.settings.get("playback_rate", 1))
         self.listen.rate.setCurrentIndex(max(0, rate))
-        self.listen.player.setPlaybackRate(self.listen.rate.currentData())
+        self.listen.change_rate()
         self.listen.follow.setChecked(self.settings.get("follow_narration", True))
         self.listen.resume_position = self.settings.get(
             "audio_position_" + self.dataset.history_key, 0

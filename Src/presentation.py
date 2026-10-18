@@ -3,6 +3,7 @@
 import re
 import random
 from decimal import Decimal, InvalidOperation
+from fractions import Fraction
 
 POSITIVE = (
     "Nicely done.",
@@ -67,6 +68,14 @@ def explanation_text(text, unanswered=False, reaction=""):
 def parse_answer(text, kind):
     """Return one canonical notation, or None if this isn't the declared shape."""
     value = text.strip()
+    if kind == "fraction":
+        if not re.fullmatch(r"[+−-]?\d+(?:\s*/\s*[+−-]?\d+)?", value):
+            return None
+        try:
+            parts = re.sub(r"\s", "", value).replace("−", "-").split("/")
+            return str(Fraction(int(parts[0]), int(parts[1]) if len(parts) == 2 else 1))
+        except (ValueError, ZeroDivisionError):
+            return None
     if kind == "number":
         value = re.sub(r"^The value (?:is|of)\s+", "", value, flags=re.I)
         value = value.rstrip(".")
@@ -117,7 +126,7 @@ def parse_answer(text, kind):
     return None
 
 
-FORMATS = ("number", "set", "truth_column", "complexity", "property_list")
+FORMATS = ("number", "fraction", "set", "truth_column", "complexity", "property_list")
 
 
 def display_answers(texts, kind=None):

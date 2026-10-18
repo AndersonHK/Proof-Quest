@@ -127,8 +127,22 @@ def run_exam_smoke(window, path, application, audible=False):
                     result["audio_muted"] = listener.audio.isMuted()
                     result["audio_device"] = listener.audio.device().description()
                     result["audio_volume"] = listener.audio.volume()
-                    listener.player.pause()
-                    finish_mascot()
+                    rate_before = listener.player.position()
+                    listener.rate.setCurrentIndex(listener.rate.findData(1.25))
+                    listener.rate.activated.emit(listener.rate.currentIndex())
+
+                    def finish_rate():
+                        try:
+                            assert listener.player.isPlaying()
+                            assert listener.player.playbackRate() == 1.25
+                            assert listener.player.position() > rate_before + 100
+                            result["rate_change_clock_advanced"] = True
+                            listener.player.pause()
+                            finish_mascot()
+                        except Exception:
+                            failed()
+
+                    QTimer.singleShot(1200, finish_rate)
                 except Exception:
                     path.write_text(
                         json.dumps({"passed": False, "error": traceback.format_exc()}),

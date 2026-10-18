@@ -36,7 +36,7 @@ The bank is an object containing a nonempty `version` string and a nonempty `que
 | `explanation` | Why the correct answer is correct |
 | `hint` | Optional nonempty topic/approach note that does not reveal the final answer |
 | `distractor_sets` | Optional nonempty list of approved four-index combinations into `wrong`; each combination must contain four distinct valid indexes |
-| `answer_format` | Optional uniform display notation: `number`, `set`, `truth_column`, `complexity`, or `property_list` |
+| `answer_format` | Optional uniform display notation: `number`, `fraction`, `set`, `truth_column`, `complexity`, or `property_list` |
 
 Each run selects one member of `correct` and four members of `wrong`. With `distractor_sets`, it randomly selects one approved combination instead of four unrestricted distractors; the five displayed positions are still shuffled. Every combination must work with every correct formulation. Equivalent correct formulations may appear in the pool but never together in an exam. No answer text may be duplicated or overlap between pools after trimming and case-folding. Source references are displayed as plain text. Questions, answers, and explanations may contain Unicode, line breaks, and long text; answer cards wrap instead of truncating.
 
@@ -46,11 +46,18 @@ Use one presentation style throughout each question's answer pool. Avoid mixing 
 
 ## Audio and word timing
 
-The timing object contains `text`, positive `duration_ms`, nonempty `words`, nonempty `sentences`, and optional `sections`. `voice` and `rate` are optional display metadata. Audio section count is independent of chapter count.
+The timing object contains `text`, positive `duration_ms`, nonempty `words`, nonempty `sentences`, and optional `sections` and `headings`. `voice` and `rate` are optional provenance metadata. Audio section count is independent of chapter count.
 
 Each word has integer `start`, `end`, `start_ms`, `end_ms`, and `sentence`. Character offsets index the original transcript using Unicode code points; `end` is exclusive. `sentence` is a zero-based index. Each sentence has `start`, `end`, `start_ms`, and `first_word`, a zero-based word index. Sentence start time must equal its first word's start time. Words must lie inside their referenced sentence. Character ranges and start times are ordered, and all times must fit the recording. Spaces and punctuation may occur between timed words.
 
 Sections contain a nonempty `title` and `start_ms`, ordered by time. The player converts code-point positions to Qt's UTF-16 cursor positions, including emoji and other supplementary-plane characters. Search also preserves these offsets.
+
+Optional `headings` define three visual levels. Each entry has a `start` character offset at a sentence boundary and `level` 1, 2, or 3. Add exactly one of:
+
+- `end`: an exclusive source offset at a sentence end. Complete sentences within that one source paragraph are grouped and styled as a spoken heading.
+- `title`: a plain-text display heading inserted before the anchored sentence. Clicking it seeks to that sentence; it has no invented speech timings.
+
+Entries must be ordered by distinct start positions and may not overlap a preceding spoken heading. Example: `{"start": 0, "end": 27, "level": 1}` or `{"start": 29, "title": "Core ideas", "level": 2}`. Offsets still refer to the original `text`, never the formatted display. The player separately maps source words, inserted labels, sentence starts, and UTF-16 cursor positions. Text and recordings need not be regenerated to add structure. Without this optional metadata, sentence-by-sentence display remains available.
 
 Supply actual speech-service word boundaries or a verified forced alignment. Do not manufacture timing from a fixed words-per-minute assumption. Playback can use local formats supported by Qt Multimedia, such as MP3 or WAV.
 
@@ -64,3 +71,5 @@ Supply actual speech-service word boundaries or a verified forced alignment. Do 
 6. Click Select new dataset. The INI stores the manifest path, not a copy of the source material.
 
 The runtime validators establish format consistency, not academic correctness. Content authors must verify facts and correct/incorrect labels against their chosen source. Do not commit the book, generated material derived from it, private generator inputs, or practice logs. Only original synthetic examples and regression fixtures are tracked.
+
+The `fraction` format displays rational values in lowest terms with a positive denominator. It rejects a zero denominator. Equivalent correct alternatives such as `1/2` and `2/4` display identically; formatted distractors must remain distinct. This is useful for probability questions without decimal-rounding clues.

@@ -11,6 +11,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import (
     QColor,
+    QFont,
     QKeySequence,
     QShortcut,
     QTextBlockFormat,
@@ -19,6 +20,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer, QMediaDevices
 from widgets import JumpSlider
+from transcript_layout import build_transcript
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -63,6 +65,7 @@ class Listening(QWidget):
         self.search_cursor = -1
         self.match = None
         self.player = QMediaPlayer(self)
+        self.requested_rate = 1.0
         self.audio = QAudioOutput(self)
         self.player.setAudioOutput(self.audio)
         self.audio.setVolume(0.75)
@@ -72,11 +75,11 @@ class Listening(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 20, 24, 20)
         layout.setSpacing(14)
-        heading = QLabel(dataset.title + " · listening guide")
+        heading = QLabel(dataset.title + " · Listening Guide")
         heading.setObjectName("title")
         layout.addWidget(heading)
         self.note = QLabel(
-            "One idea at a time. Click any word to replay its sentence. Ctrl+F finds and jumps."
+            "Click a word to replay its sentence. Ctrl+F finds and jumps."
         )
         self.note.setWordWrap(True)
         layout.addWidget(self.note)
@@ -94,9 +97,7 @@ class Listening(QWidget):
         for speed in [0.75, 1, 1.1, 1.25, 1.5, 1.75, 2]:
             self.rate.addItem(f"{speed:g}×", speed)
         self.rate.setCurrentIndex(1)
-        self.rate.activated.connect(
-            lambda: self.player.setPlaybackRate(self.rate.currentData())
-        )
+        self.rate.activated.connect(self.change_rate)
         self.volume = JumpSlider(Qt.Horizontal)
         self.volume.setRange(0, 100)
         self.volume.setValue(75)
@@ -171,7 +172,7 @@ class Listening(QWidget):
                 lambda: self.seek(self.chapter.currentData())
             )
             self.note.setText(
-                f"{self.data.get('voice','Audio')} · {clock(self.data['duration_ms'])} at 1× · Click a word to replay its sentence. Ctrl+F finds and jumps."
+                "Click a word to replay its sentence. Ctrl+F finds and jumps."
             )
         else:
             self.note.setText(
@@ -196,16 +197,12 @@ class Listening(QWidget):
         self.timer.start()
 
     def prepare_transcript(self):
-        self.word_ranges = []
-        pieces = []
-        offset = 0
-        self.sentence_offsets = []
-        for s in self.data["sentences"]:
-            segment = self.data["text"][s["start"] : s["end"]]
-            self.sentence_offsets.append(offset)
-            pieces.append(segment)
-            offset += len(segment) + 1
-        self.display = "\n".join(pieces)
+        document = build_transcript(self.data)
+        self.display = document["display"]
+        self.to_qt = document["to_qt"]
+        self.word_ranges = document["word_ranges"]
+        self.sentence_offsets = document["sentence_offsets"]
+        self.display_blocks = document["blocks"]
         self.text.setPlainText(self.display)
         cursor = QTextCursor(self.text.document())
         cursor.select(QTextCursor.Document)
@@ -213,18 +210,29 @@ class Listening(QWidget):
         block.setLineHeight(130, QTextBlockFormat.ProportionalHeight.value)
         block.setBottomMargin(4)
         cursor.mergeBlockFormat(block)
-        for w in self.data["words"]:
-            s = self.data["sentences"][w["sentence"]]
-            base = self.sentence_offsets[w["sentence"]]
-            self.word_ranges.append(
-                (base + w["start"] - s["start"], base + w["end"] - s["start"])
+        body = QTextCharFormat()
+        body.setFontPointSize(14)
+        body.setFontWeight(QFont.Normal)
+        cursor.mergeCharFormat(body)
+        for item in self.display_blocks:
+            level = item["level"]
+            if not level:
+                continue
+            cursor.setPosition(item["start"])
+            cursor.setPosition(item["end"], QTextCursor.KeepAnchor)
+            char = QTextCharFormat()
+            char.setFontPointSize({1: 24, 2: 19, 3: 16}[level])
+            char.setFontWeight(QFont.Bold if level < 3 else QFont.DemiBold)
+            char.setForeground(QColor("#fff0cf" if level == 1 else "#cbb6f8"))
+            cursor.mergeCharFormat(char)
+            style = QTextBlockFormat()
+            style.setHeadingLevel(level)
+            style.setTopMargin(
+                8 if item["start"] == 0 else {1: 26, 2: 18, 3: 12}[level]
             )
-        # Qt cursor positions count UTF-16 units; dataset offsets count Unicode code points.
-        self.to_qt = [0]
-        for char in self.display:
-            self.to_qt.append(self.to_qt[-1] + (2 if ord(char) > 0xFFFF else 1))
-        self.word_ranges = [(self.to_qt[a], self.to_qt[b]) for a, b in self.word_ranges]
-        self.sentence_offsets = [self.to_qt[p] for p in self.sentence_offsets]
+            style.setBottomMargin({1: 14, 2: 9, 3: 7}[level])
+            style.setLineHeight(115, QTextBlockFormat.ProportionalHeight.value)
+            cursor.mergeBlockFormat(style)
         self.word_chars = [x[0] for x in self.word_ranges]
         self.word_times = [w["start_ms"] for w in self.data["words"]]
 
@@ -251,6 +259,23 @@ class Listening(QWidget):
                 return
             self.audio.setMuted(False)
             self.audio.setVolume(self.volume.value() / 100)
+            self.player.play()
+
+    def change_rate(self):
+        rate = self.rate.currentData()
+        # The native getter can still report the old rate while WMF applies a
+        # pending request. Compare requests so rapid changes can return to it.
+        if rate == self.requested_rate:
+            return
+        self.requested_rate = rate
+        # WMF can advance its clock silently after a live rate change. Changing
+        # the rate while paused restarts audio delivery without resetting position.
+        # Keep this synchronous: a delayed play() could undo the user's next pause.
+        playing = self.player.isPlaying()
+        if playing:
+            self.player.pause()
+        self.player.setPlaybackRate(rate)
+        if playing:
             self.player.play()
 
     def set_volume(self, value):
@@ -314,6 +339,21 @@ class Listening(QWidget):
 
     def jump_to_char(self, pos):
         if not self.data:
+            return
+        heading = next(
+            (
+                b
+                for b in self.display_blocks
+                if b["inserted"] and b["start"] <= pos <= b["end"]
+            ),
+            None,
+        )
+        if heading:
+            self.seek(self.data["sentences"][heading["sentence"]]["start_ms"])
+            cursor = self.text.textCursor()
+            cursor.setPosition(heading["start"])
+            self.text.setTextCursor(cursor)
+            self.text.ensureCursorVisible()
             return
         i = max(0, bisect.bisect_right(self.word_chars, pos) - 1)
         sentence = self.data["sentences"][self.data["words"][i]["sentence"]]

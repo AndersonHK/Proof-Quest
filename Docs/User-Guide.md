@@ -40,9 +40,9 @@ The warm yellow balloon floats above the interface, with a tail beside Fable’s
 
 ## Listen
 
-Datasets with audio show it in **Listen + transcript**. Soft plum marks text already spoken; warm gold marks the current word. **Follow narration** scrolls with the recording. Uncheck it to browse without automatic scrolling.
+Datasets with audio show it in **Listen + transcript**, under **Listening Guide**. Chapter, topic, and subtopic headings use progressively smaller heading sizes above the body text when the dataset supplies structure. Clicking a display-only heading seeks to its first sentence. Duration appears on the timeline and speed on its control; the voice identifier is not repeated above them. Soft plum marks text already spoken; warm gold marks the current word. **Follow narration** scrolls with the recording. Uncheck it to browse without automatic scrolling.
 
-Click a word to jump to its sentence's beginning. **Ctrl+F** focuses search; **Enter**, **Next match**, and **Previous match** find and jump through occurrences. Purple marks the found text. **Ctrl+Space** toggles playback. Volume, playback speed, section selection, and ten-second skip controls are available. Leaving the listening tab pauses playback.
+Click a word to jump to its sentence's beginning. **Ctrl+F** focuses search; **Enter**, **Next match**, and **Previous match** find and jump through occurrences. Purple marks the found text. **Ctrl+Space** toggles playback. Volume, playback speed, section selection, and ten-second skip controls are available. Changing speed resumes audio automatically if it was playing and keeps it paused if it was paused. Leaving the listening tab pauses playback.
 
 Click anywhere on the playback bar to seek to that position; click the volume track to set that level. Both sliders also support dragging and keyboard adjustment. **Audio output** follows the current system default unless you choose a particular speaker or headset. That choice is saved in the INI. If a selected device disconnects, the player falls back to the system default. Playback on Windows uses the native Windows audio backend for headset compatibility.
 

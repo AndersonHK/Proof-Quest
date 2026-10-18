@@ -209,6 +209,50 @@ def validate_timings(data):
             "Invalid audio section start.",
         )
         previous_time = section["start_ms"]
+    headings = data.get("headings", [])
+    require(isinstance(headings, list), "Transcript headings must be an array.")
+    sentence_starts = {s["start"] for s in sentences}
+    sentence_ends = {s["end"] for s in sentences}
+    previous_start = -1
+    previous_end = 0
+    for heading in headings:
+        require(isinstance(heading, dict), "Transcript heading must be an object.")
+        start = heading.get("start")
+        level = heading.get("level")
+        require(
+            type(start) is int
+            and start in sentence_starts
+            and start > previous_start
+            and start >= previous_end,
+            "Headings must have ordered, nonoverlapping sentence-start anchors.",
+        )
+        require(
+            type(level) is int and level in (1, 2, 3),
+            "Heading level must be 1, 2, or 3.",
+        )
+        require(
+            ("end" in heading) != ("title" in heading),
+            "Heading needs either a spoken end offset or a display title.",
+        )
+        if "end" in heading:
+            end = heading["end"]
+            require(
+                type(end) is int
+                and start < end <= len(text)
+                and end in sentence_ends
+                and "\n" not in text[start:end]
+                and "\r" not in text[start:end],
+                "Spoken heading must cover complete sentences within one paragraph.",
+            )
+            previous_end = end
+        else:
+            title = heading["title"]
+            require(
+                nonempty(title) and "\n" not in title and "\r" not in title,
+                "Display heading needs a single-paragraph title.",
+            )
+            previous_end = start
+        previous_start = start
     return data
 
 
