@@ -3,6 +3,8 @@
 import argparse, json, re, subprocess, sys, zipfile
 from pathlib import Path
 from distribution import ARCHIVE_NAME, inspect_archive
+from build_python import PYTHON_ARCHIVE, inspect_python_archive
+from build_msi import MSI_NAME, inspect_msi
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,6 +18,8 @@ def main():
         ROOT / "README.md",
         ROOT / "AGENTS.md",
         ROOT / "THIRD-PARTY-NOTICES.md",
+        ROOT / "Dist" / "README.md",
+        ROOT / "Packaging" / "Python-README.md",
         *(ROOT / "Docs").rglob("*.md"),
     ]:
         for target in re.findall(r"\]\(([^)]+)\)", p.read_text(encoding="utf-8")):
@@ -50,6 +54,21 @@ def main():
         try:
             inspect_archive(release)
             with zipfile.ZipFile(release) as archive:
+                sizes = {
+                    info.filename.removeprefix("ProofQuest/"): info.file_size
+                    for info in archive.infolist()
+                    if not info.is_dir()
+                    and info.filename != "ProofQuest/proofquest.ini"
+                }
+                version = (ROOT / "VERSION").read_text().strip()
+                receipt = inspect_msi(ROOT / "Dist" / MSI_NAME, sizes, version)
+                if (
+                    json.loads(archive.read("ProofQuest/release-manifest.json"))[
+                        "version"
+                    ]
+                    != receipt["version"]
+                ):
+                    errors.append("Windows ZIP and MSI versions differ.")
                 for notice in ("LICENSE", "THIRD-PARTY-NOTICES.md"):
                     if archive.read("ProofQuest/" + notice).replace(b"\r\n", b"\n") != (
                         ROOT / notice
@@ -68,13 +87,19 @@ def main():
                         errors.append("Bundled demo differs from the original: " + name)
         except (OSError, ValueError, KeyError, zipfile.BadZipFile) as error:
             errors.append(str(error))
+    try:
+        inspect_python_archive(ROOT / "Dist" / PYTHON_ARCHIVE, ROOT)
+    except (OSError, ValueError, KeyError, zipfile.BadZipFile) as error:
+        errors.append(str(error))
     for path in (ROOT / "Dist").iterdir():
-        if path.name != ARCHIVE_NAME:
+        if path.name not in {ARCHIVE_NAME, MSI_NAME, PYTHON_ARCHIVE, "README.md"}:
             errors.append("Unexpected loose content in Dist: " + path.name)
     if errors:
         print("\n".join(errors))
         return 1
-    print("Documentation links, staged privacy boundaries, and demo ZIP checks passed.")
+    print(
+        "Documentation, staged privacy, Windows ZIP/MSI and Python ZIP checks passed."
+    )
     return 0
 
 

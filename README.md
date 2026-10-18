@@ -6,9 +6,9 @@ Fable, the violet fox, is the study companion. The interface uses violet actions
 
 ## Run
 
-Download [Dist/ProofQuest-win-x64.zip](Dist/ProofQuest-win-x64.zip), extract it completely, and run `ProofQuest/ProofQuest.exe`. The ZIP contains everything needed, including the demo and its default INI. Keep `_internal` beside the EXE. Python is not required to run the packaged app.
+Choose an edition in [Dist/README.md](Dist/README.md): a Windows MSI installer, a portable Windows ZIP, or a Python-source ZIP for supported macOS/Linux/Windows systems. For the portable Windows edition, download [Dist/ProofQuest-win-x64.zip](Dist/ProofQuest-win-x64.zip), extract it completely, and run `ProofQuest/ProofQuest.exe`. The ZIP contains everything needed, including the demo and its default INI. Keep `_internal` beside the EXE. Python is not required to run the packaged app.
 
-For personal use and local testing in this repository, run `python Scripts/install_local.py`, then open `Local/ProofQuest/ProofQuest.exe`. `Local/` is Git-ignored. Updating that installation preserves your settings and practice history. `Dist/` contains only the shareable ZIP and is tracked.
+For personal use and local testing in this repository, run `python Scripts/install_local.py`, then open `Local/ProofQuest/ProofQuest.exe`. `Local/` is Git-ignored. Updating that installation preserves your settings and practice history. `Dist/` contains the three shareable packages and their README, and is tracked.
 
 Click **Select new dataset** and choose its `dataset.json`. The **Help** button explains practice, grading, playback, and dataset selection. The initial release includes a small original demo. Private course datasets are external and ignored by Git.
 
@@ -16,7 +16,7 @@ The selected dataset, window dimensions, chapter filters, run mode, volume, play
 
 ## Develop
 
-Use Windows x64 and Python 3.9 or newer. From the repository root:
+Use Windows x64 and Python 3.9–3.12 to build all distributions. The MSI builder uses the Windows standard-library `msilib`, which was removed in Python 3.13. Running the Python edition supports Python 3.9–3.13 where PySide6 6.8.3 supplies wheels. From the repository root:
 
 ```powershell
 python -m venv .venv
@@ -36,7 +36,7 @@ The build script does not install dependencies. [Build and validation](Docs/Deve
 | `Tests/`, `Scripts/` | Regression tests, build and validation tools |
 | `Assets/Fable/` | Approved fox artwork, animation poses, and generation prompts |
 | `Docs/` | Indexed current documentation |
-| `Dist/ProofQuest-win-x64.zip` | Single tracked distribution with demo defaults and all runtime files |
+| `Dist/` | Windows ZIP/MSI, Python-source ZIP, and edition-selection README |
 | `Local/ProofQuest/` | Ignored personal installation and local testing runtime |
 | `Datasets/`, `Private/` | Ignored private educational inputs and derived material |
 | `Out/` | Ignored build intermediates, test receipts, screenshots |

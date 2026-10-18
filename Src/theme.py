@@ -40,6 +40,9 @@ QPushButton:disabled {color:#847292;background:#251d32;}
 QPushButton#primary {background:#b79aff;color:#211333;border-color:#b79aff;}
 QPushButton#primary:hover {background:#c9b2ff;}
 QPushButton#primary:disabled {background:#352546;color:#9785a6;border-color:#4b375f;}
+QPushButton#syncNarration {background:#f3ce8c;color:#241733;border-color:#f3ce8c;font-size:12pt;font-weight:700;}
+QPushButton#syncNarration:hover {background:#ffe0a6;border-color:#ffe0a6;}
+QPushButton#syncNarration:focus {border-color:#fff0cf;}
 QPushButton#danger {color:#ffd0b0;border-color:#a16a5c;}
 QListWidget,QTextBrowser,QTextEdit,QTableWidget {background:#211a31;border:1px solid #463556;border-radius:9px;padding:8px;}
 QListWidget::item {padding:9px;border-radius:6px;}

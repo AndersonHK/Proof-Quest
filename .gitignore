@@ -17,5 +17,5 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-# Dist contains the single current runnable ZIP by explicit user request.
+# Dist contains the current release packages by explicit user request.
 # Do not add broad executable/DLL ignores that break the committed app bundle.

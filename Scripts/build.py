@@ -5,11 +5,15 @@ from pathlib import Path
 
 from distribution import ARCHIVE_NAME, create_archive, write_demo_settings
 from build_icon import build_icon
+from build_python import build_python
+from build_msi import from_archive, msi_api
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def main():
+    # Fail before changing release artifacts if the Windows installer toolchain is missing.
+    msi_api()
     version = importlib.metadata.version("pyinstaller")
     if version != "6.16.0":
         raise RuntimeError("Use pinned PyInstaller 6.16.0 from requirements-dev.txt.")
@@ -131,6 +135,8 @@ def main():
     destination = ROOT / "Dist" / ARCHIVE_NAME
     create_archive(release, destination)
     print("Built distributable:", destination)
+    print("Built installer:", from_archive(destination))
+    print("Built Python edition:", build_python(ROOT))
 
 
 if __name__ == "__main__":

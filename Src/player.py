@@ -42,11 +42,32 @@ def clock(ms):
 
 class Transcript(QTextEdit):
     clicked = Signal(int)
+    manuallyScrolled = Signal()
 
     def __init__(self):
         super().__init__()
         self.setReadOnly(True)
         self.setObjectName("transcript")
+        self.verticalScrollBar().sliderPressed.connect(self.manuallyScrolled)
+        self.verticalScrollBar().actionTriggered.connect(self.manuallyScrolled)
+
+    def wheelEvent(self, event):
+        if not event.angleDelta().isNull() or not event.pixelDelta().isNull():
+            self.manuallyScrolled.emit()
+        super().wheelEvent(event)
+
+    def keyPressEvent(self, event):
+        if event.key() in (
+            Qt.Key_Up,
+            Qt.Key_Down,
+            Qt.Key_PageUp,
+            Qt.Key_PageDown,
+            Qt.Key_Home,
+            Qt.Key_End,
+            Qt.Key_Space,
+        ):
+            self.manuallyScrolled.emit()
+        super().keyPressEvent(event)
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
@@ -148,11 +169,20 @@ class Listening(QWidget):
         self.match_label = QLabel("")
         self.follow = QCheckBox("Follow narration")
         self.follow.setChecked(True)
-        for w in [self.search, prev, nxt, self.match_label, self.follow]:
+        self.sync = QPushButton("Sync to Narration")
+        self.sync.setObjectName("syncNarration")
+        self.sync.setAccessibleDescription(
+            "Return to the spoken line and follow playback"
+        )
+        self.sync.hide()
+        self.sync.clicked.connect(lambda: self.follow.setChecked(True))
+        self.follow.toggled.connect(self.follow_changed)
+        for w in [self.search, prev, nxt, self.match_label, self.follow, self.sync]:
             search.addWidget(w)
         layout.addLayout(search)
         self.text = Transcript()
         self.text.clicked.connect(self.jump_to_char)
+        self.text.manuallyScrolled.connect(lambda: self.follow.setChecked(False))
         layout.addWidget(self.text, 1)
         self.shortcut = QShortcut(QKeySequence.Find, self)
         self.shortcut.setContext(Qt.WidgetWithChildrenShortcut)
@@ -195,6 +225,31 @@ class Listening(QWidget):
         self.timer.setInterval(35)
         self.timer.timeout.connect(self.tick)
         self.timer.start()
+
+    def follow_changed(self, enabled):
+        self.follow.setVisible(enabled)
+        self.sync.setVisible(not enabled)
+        if enabled:
+            # Sync immediately even if paused or the current word has not changed.
+            self.last_index = None
+            self.text.setFocus()
+            self.tick()
+            if self.data:
+                index = max(
+                    0, bisect.bisect_right(self.word_times, self.player.position()) - 1
+                )
+                self.reveal_word(index)
+
+    def reveal_word(self, index):
+        cursor = self.text.textCursor()
+        cursor.setPosition(self.word_ranges[index][0])
+        self.text.setTextCursor(cursor)
+        self.text.ensureCursorVisible()
+        y = self.text.cursorRect().top()
+        height = self.text.viewport().height()
+        if y > height * 0.65 or y < height * 0.15:
+            bar = self.text.verticalScrollBar()
+            bar.setValue(bar.value() + int(y - height * 0.4))
 
     def prepare_transcript(self):
         document = build_transcript(self.data)
@@ -440,15 +495,7 @@ class Listening(QWidget):
             if active:
                 selections.append(self.selection(start, end, "#f3ce8c", "#241733"))
             if self.follow.isChecked() and not self.search.hasFocus():
-                c = self.text.textCursor()
-                c.setPosition(start)
-                self.text.setTextCursor(c)
-                self.text.ensureCursorVisible()
-                y = self.text.cursorRect().top()
-                h = self.text.viewport().height()
-                if y > h * 0.65 or y < h * 0.15:
-                    bar = self.text.verticalScrollBar()
-                    bar.setValue(bar.value() + int(y - h * 0.4))
+                self.reveal_word(i)
         if self.match:
             selections.append(self.selection(*self.match, "#684589", "#fff5e5"))
         self.text.setExtraSelections(selections)

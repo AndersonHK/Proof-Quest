@@ -26,9 +26,9 @@ Tests use synthetic data and temporary histories. They cover pool sampling, grad
 
 ## Build output
 
-PyInstaller stages a Windows x64 bundle under ignored `Out/Package/ProofQuest/`. A native Qt icon packager writes 16–256-pixel fox ICO frames, embedded in the EXE and used by the window. Windows uses an explicit Fable app identity; the local installer refreshes only this app’s shell entries. The build then produces the single tracked `Dist/ProofQuest-win-x64.zip`. Its top-level `ProofQuest/` folder contains the EXE, shared runtime libraries, original demo, Help, notices, manifest, and a public `proofquest.ini` selecting `_internal/Examples/Demo/dataset.json`. Private dataset roots and personal settings are never build inputs.
+PyInstaller stages a Windows x64 bundle under ignored `Out/Package/ProofQuest/`. A native Qt icon packager writes 16–256-pixel fox ICO frames, embedded in the EXE and used by the window. Windows uses an explicit Fable app identity; the local installer refreshes only this app’s shell entries. The build then produces `Dist/ProofQuest-win-x64.zip`, `Dist/ProofQuest-win-x64.msi`, and `Dist/ProofQuest-python.zip`. Its top-level `ProofQuest/` folder contains the EXE, shared runtime libraries, original demo, Help, notices, manifest, and a public `proofquest.ini` selecting `_internal/Examples/Demo/dataset.json`. Private dataset roots and personal settings are never build inputs.
 
-The ZIP is the one maintained distribution copy and is not ignored. Personal usage and local testing happen in ignored `Local/ProofQuest/`, deployed by `Scripts/install_local.py`. Build metadata and relative source hashes are inside the ZIP; absolute local paths and raw task logs do not belong in public documentation.
+All three packages and `Dist/README.md` are tracked. Personal usage and local testing happen in ignored `Local/ProofQuest/`, deployed by `Scripts/install_local.py`. Build metadata and relative source hashes are inside the ZIP; absolute local paths and raw task logs do not belong in public documentation.
 
 The installer verifies the ZIP before extracting it into temporary ignored staging, then updates managed runtime files. An existing local INI and `Logs/` are preserved. The installer refuses to replace a running EXE. Builds do not modify the personal installation until the install script is invoked.
 
@@ -45,6 +45,18 @@ Use an explicit `--dataset` to test another manifest. `--home` isolates INI/logs
 Smoke playback is muted by default. Add `--audible-audio` for an intentional speaker/headset test, and verify the process's Windows audio-session output separately. The Windows player defaults to Qt's native `windows` media backend because the pinned FFmpeg backend can reject some headset channel layouts while its clock continues. `QT_MEDIA_BACKEND` can explicitly override this for diagnosis; the app does not change persistent environment settings.
 
 Speed changes briefly pause an active stream, set the new rate, then resume from its current position. This avoids a reproduced native Windows backend failure where a live rate change silences output while the clock advances. Paused/stopped playback stays paused/stopped; reselecting the current speed does nothing. The sequence is synchronous so a later user pause cannot be overridden by a queued resume. Volume, mute and output-device selection are preserved. When validating rate changes, measure Windows audio-session output as well as position advancement; the packaged smoke test checks transport continuity but is muted by default.
+
+## Installer and Python editions
+
+The full Windows pipeline uses 64-bit Python 3.9–3.12. `Scripts/build_msi.py` uses Windows' cabinet/installer APIs through standard-library `msilib`; Python 3.13 removed that module. No WiX install or dependency download occurs during a build. Run `python Scripts/build_msi.py` to rebuild only the installer from the audited portable ZIP.
+
+The MSI is per-user under LocalAppData/Programs/ProofQuest, with a Start-menu shortcut and normal Installed apps removal. Its stable UpgradeCode identifies this product family; ProductCode changes with the three-part VERSION, and component GUIDs derive from stable paths. Older products are removed inside the upgrade transaction before installing new files, supporting rollback. Newer installed versions block downgrades. Files use HKCU component registration; there are no elevated custom actions. The MSI deliberately omits the portable demo INI: the application creates its own settings and selects the bundled demo on first launch. INI/history are not installer-managed, so repair, upgrade and uninstall preserve them. Close the app before maintenance. A package rebuilt with the same version is a repair, not a new upgrade; increment VERSION for releases.
+
+`Scripts/build_python.py` runs independently on any supported Python platform using the standard library. It packages only the source/resource whitelist, dependencies list, license, Help, original demo and canonical source-layout INI. Its bundled README comes from `Packaging/Python-README.md`. Fixed ZIP metadata and a SHA-256 file inventory make unchanged inputs reproducible. No interpreter, native Qt binaries, private dataset or local environment enters this ZIP. Users install the pinned runtime dependency in a virtual environment. Supported wheel targets and platform testing limits are stated in the distribution README.
+
+Validation covers MSI file-table inventory against the portable ZIP, per-user installation, an older-version upgrade, repair, downgrade rejection, uninstall with user-data preservation, and a demo launch from the installed files. An extracted Python ZIP is launched separately, outside the repository, to verify resources and demo defaults. macOS/Linux execution still needs native platform testing.
+
+Installer design follows [Microsoft's installation-context guidance](https://learn.microsoft.com/en-us/windows/win32/msi/installation-context), [upgrade table](https://learn.microsoft.com/en-us/windows/win32/msi/upgrade-table), and [transaction sequencing](https://learn.microsoft.com/en-us/windows/win32/msi/removeexistingproducts-action).
 
 ## Source and publication boundaries
 
@@ -75,3 +87,7 @@ Quips occupy one line, followed by “Click Fable again for a hint.” on its ow
 ## Transcript structure
 
 `Src/transcript_layout.py` maps unchanged spoken source spans into display blocks. Optional heading metadata can group spoken title sentences into one block or insert an unspoken topic label. The player styles heading levels at 24, 19, and 16 points over 14-point body text, retaining semantic Qt heading levels. Source-to-display and Unicode-to-UTF-16 mappings keep word highlighting, search, and sentence seeking accurate. Inserted headings have explicit seek targets and no fabricated word boundaries. Metadata validation rejects overlaps and partial-sentence ranges.
+
+## Narration following
+
+Following starts enabled for each listening session. Wheel/trackpad, scrollbar drag/track actions, and transcript navigation keys detach the view; programmatic highlighting and scrolling do not. The checkbox becomes a warm yellow, bold **Sync to Narration** button. Sync reveals the current word immediately, even while paused or before the first timestamp, without seeking or restarting playback. Existing highlighting continues while the user browses. The saved legacy follow preference is ignored on session startup.
