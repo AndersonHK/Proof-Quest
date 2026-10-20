@@ -31,6 +31,9 @@ QLabel#brandSub {font-size:10pt;color:#c8b7e5;}
 QLabel#muted {color:#baaacf;font-size:10pt;}
 QLabel#prompt {font-size:16pt;font-weight:600;line-height:150%;color:#fff5e0;}
 QLabel#banner {padding:16px;background:#34244d;border:1px solid #5c437c;border-radius:10px;color:#eadbff;}
+QFrame#examBanner {background:#34244d;border:1px solid #5c437c;border-radius:10px;}
+QLabel#examBannerText,QLabel#examTime {background:transparent;color:#eadbff;}
+QLabel#examTime {font-family:Consolas,"DejaVu Sans Mono",monospace;font-weight:600;}
 QLabel#xp {background:transparent;border:0;padding:0;color:#baaacf;font-size:11pt;}
 QFrame#card {background:#241d38;border:1px solid #4b3c64;border-radius:14px;}
 QPushButton {background:#302442;border:1px solid #5a4576;border-radius:8px;padding:9px 15px;font-weight:600;}

@@ -1,7 +1,7 @@
 from __future__ import annotations
 import argparse, html, json, os, random, sys, time
 from pathlib import Path
-from PySide6.QtCore import Qt, QTimer, QUrl, QRect
+from PySide6.QtCore import Qt, QTimer, QUrl, QRect, QEvent
 from PySide6.QtGui import (
     QDesktopServices,
     QIcon,
@@ -41,6 +41,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
 )
 from engine import History, generate, grade
+from exam_timer import ExamTimer, duration_text
 from dataset import Dataset, DatasetError
 from settings import Settings, resources_directory
 from widgets import AnswerChoice
@@ -81,6 +82,13 @@ class Trainer(QMainWindow):
         super().__init__()
         self.settings = settings
         self.initialize_dataset(dataset)
+        QApplication.instance().applicationStateChanged.connect(
+            self.application_focus_changed
+        )
+        self.clock_display_timer = QTimer(self)
+        self.clock_display_timer.setInterval(250)
+        self.clock_display_timer.timeout.connect(self.update_exam_clock)
+        self.clock_display_timer.start()
 
     def initialize_dataset(self, dataset):
         self.dataset = dataset
@@ -99,8 +107,10 @@ class Trainer(QMainWindow):
         self.exam = None
         self.answers = {}
         self.result = None
-        self.elapsed_base = 0
-        self.started = 0
+        self.exam_timer = ExamTimer()
+        self.exam_timer.transition(
+            focused=self.isActiveWindow() and not self.isMinimized()
+        )
         self.read_only = False
         self.current = 0
         shell = QWidget()
@@ -149,6 +159,7 @@ class Trainer(QMainWindow):
             shell, self.mascot, self.mascot_home, self.mascot_review, self.practice
         )
         self.speech = SpeechDirector(self, self.speech_home, self.speech_review)
+        self.mascot.clicked.connect(self.exam_activity)
         self.tabs.currentChanged.connect(self.tab_changed)
         self.statusBar().showMessage(
             "Answers save automatically. Choose carefully. Fable is judging."
@@ -167,8 +178,17 @@ class Trainer(QMainWindow):
         self.refresh_stats()
         pending = self.history.pending()
         if pending:
-            self.exam, self.answers, self.elapsed_base = pending
-            self.started = time.monotonic()
+            self.exam, self.answers, seconds = pending
+            saved_timer = self.settings.get(
+                "exam_timer_" + self.dataset.history_key, {}
+            )
+            self.exam_timer.reset(
+                seconds,
+                paused=(
+                    saved_timer.get("run") == self.exam["id"]
+                    and saved_timer.get("paused") is True
+                ),
+            )
             self.read_only = False
             self.banner.setText(
                 "Your saved run uses an older question bank. Regenerate test to use the revised choices."
@@ -179,6 +199,7 @@ class Trainer(QMainWindow):
             self.show_question(0)
         else:
             self.new_exam(initial=True)
+        self.update_exam_clock()
 
     def build_practice(self):
         layout = QVBoxLayout(self.practice)
@@ -228,15 +249,48 @@ class Trainer(QMainWindow):
             chapter_grid.addWidget(c, i // 4, i % 4)
         chapter_scroll.setWidget(chapter_widget)
         layout.addWidget(chapter_scroll)
+        self.banner_card = QFrame()
+        self.banner_card.setObjectName("examBanner")
+        card_row = QHBoxLayout(self.banner_card)
+        card_row.setContentsMargins(16, 6, 16, 6)
+        card_row.setSpacing(14)
         self.banner = label(
-            "Choose chapters and a question count, then regenerate the test.", "banner"
+            "Choose chapters and a question count, then regenerate the test.",
+            "examBannerText",
         )
+        card_row.addWidget(self.banner, 1)
+        self.exam_time = QLabel("00:00:00")
+        self.exam_time.setObjectName("examTime")
+        self.exam_time.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.exam_time.setAccessibleName("Active exam time")
+        self.timer_button = QPushButton("▶ Resume")
+        self.timer_button.setObjectName("examTimerButton")
+        self.timer_button.clicked.connect(self.toggle_exam_timer)
+        self.timer_button.ensurePolished()
+        self.exam_time.ensurePolished()
+        self.exam_time.setFixedWidth(
+            self.exam_time.fontMetrics().horizontalAdvance("000:00:00") + 12
+        )
+        self.timer_button.setFixedWidth(
+            max(
+                self.timer_button.fontMetrics().horizontalAdvance(s)
+                for s in ("▶ Resume", "Ⅱ Pause", "Finished")
+            )
+            + 36
+        )
+        card_row.addWidget(self.exam_time)
+        card_row.addWidget(self.timer_button)
         banner_row = QHBoxLayout()
-        banner_row.addWidget(self.banner, 1)
+        banner_row.addWidget(self.banner_card, 1, Qt.AlignVCenter)
         self.speech_review = SpeechBubble(tail="right")
         self.speech_review.hide()
         self.mascot_review = QWidget()
         self.mascot_review.setFixedSize(84, 84)
+        # Keep Fable's landing space even while the fox is at the header. Showing
+        # this anchor must not shrink the card or move its timer when grading.
+        policy = self.mascot_review.sizePolicy()
+        policy.setRetainSizeWhenHidden(True)
+        self.mascot_review.setSizePolicy(policy)
         self.mascot_review.hide()
         banner_row.addWidget(self.mascot_review)
         layout.addLayout(banner_row)
@@ -253,7 +307,10 @@ class Trainer(QMainWindow):
         self.sidebar.setMinimumWidth(245)
         self.sidebar.setMaximumWidth(350)
         self.sidebar.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.sidebar.currentRowChanged.connect(self.show_question)
+        self.sidebar.currentRowChanged.connect(
+            lambda index: self.show_question(index, activity=True)
+        )
+        self.sidebar.itemClicked.connect(self.exam_activity)
         side_l.addWidget(self.sidebar, 1)
         side_l.addWidget(
             label(
@@ -302,7 +359,7 @@ class Trainer(QMainWindow):
         footer = QHBoxLayout()
         self.previous = QPushButton("← Previous")
         self.previous.clicked.connect(
-            lambda: self.show_question(max(0, self.current - 1))
+            lambda: self.show_question(max(0, self.current - 1), activity=True)
         )
         self.next = QPushButton("Next question →")
         self.next.clicked.connect(self.next_question)
@@ -331,8 +388,68 @@ class Trainer(QMainWindow):
         self.mode.blockSignals(False)
 
     def elapsed(self):
-        return self.elapsed_base + (
-            time.monotonic() - self.started if self.started else 0
+        return self.exam_timer.elapsed()
+
+    def event(self, event):
+        if hasattr(self, "exam_timer") and event.type() in (
+            QEvent.WindowActivate,
+            QEvent.WindowDeactivate,
+            QEvent.WindowStateChange,
+        ):
+            if event.type() == QEvent.WindowDeactivate:
+                self.exam_timer.transition(focused=False)
+            elif event.type() == QEvent.WindowActivate:
+                self.exam_timer.transition(focused=not self.isMinimized())
+            elif event.type() == QEvent.WindowStateChange and self.isMinimized():
+                self.exam_timer.transition(focused=False)
+            if hasattr(self, "timer_button"):
+                self.update_exam_clock()
+        return super().event(event)
+
+    def application_focus_changed(self, state):
+        self.exam_timer.transition(
+            focused=(
+                state == Qt.ApplicationActive
+                and self.isActiveWindow()
+                and not self.isMinimized()
+            )
+        )
+        self.update_exam_clock()
+
+    def exam_activity(self, *args):
+        if self.exam and not self.result and not self.read_only:
+            self.exam_timer.activity()
+            self.update_exam_clock()
+
+    def toggle_exam_timer(self):
+        if self.exam and not self.result and not self.read_only:
+            self.exam_timer.toggle()
+            self.update_exam_clock()
+            self.history.save(
+                self.exam,
+                self.answers,
+                self.elapsed(),
+                ("timer", {"state": self.exam_timer.state}),
+            )
+            self.autosave()
+
+    def update_exam_clock(self):
+        self.exam_time.setText(duration_text(self.elapsed()))
+        finished = self.exam_timer.state == "finished"
+        self.timer_button.setEnabled(not finished)
+        self.timer_button.setText(
+            "Finished"
+            if finished
+            else "Ⅱ Pause" if self.exam_timer.running else "▶ Resume"
+        )
+        self.timer_button.setToolTip(
+            "Exam finished"
+            if finished
+            else (
+                "Pause active exam time"
+                if self.exam_timer.running
+                else "Resume timing while this window is focused"
+            )
         )
 
     def autosave(self):
@@ -373,8 +490,9 @@ class Trainer(QMainWindow):
         self.answers = {}
         self.result = None
         self.read_only = False
-        self.elapsed_base = 0
-        self.started = time.monotonic()
+        self.exam_timer.reset()
+        if not initial:
+            self.exam_timer.activity()
         self.exam["dataset_id"] = self.dataset.id
         self.exam["dataset_title"] = self.dataset.title
         self.history.begin(self.exam)
@@ -386,6 +504,7 @@ class Trainer(QMainWindow):
             f'{len(self.exam["questions"])} questions · One correct choice each · Click Fable for a hint.'
         )
         self.refresh_stats()
+        self.update_exam_clock()
 
     def fill_sidebar(self):
         self.sidebar.blockSignals(True)
@@ -415,9 +534,11 @@ class Trainer(QMainWindow):
         self.bar.setRange(0, len(self.exam["questions"]))
         self.bar.setValue(len(self.answers))
 
-    def show_question(self, index):
+    def show_question(self, index, activity=False):
         if not self.exam or not 0 <= index < len(self.exam["questions"]):
             return
+        if activity:
+            self.exam_activity()
         changed = index != self.current
         self.current = index
         if changed:
@@ -557,6 +678,7 @@ class Trainer(QMainWindow):
     def select_answer(self, index):
         if self.result or self.read_only:
             return
+        self.exam_activity()
         before = self.answers.get(str(self.current))
         self.answers[str(self.current)] = index
         self.journey.answer_selected()
@@ -577,6 +699,7 @@ class Trainer(QMainWindow):
             self.options[index].click()
 
     def clear_answer(self):
+        self.exam_activity()
         self.answers.pop(str(self.current), None)
         self.history.save(
             self.exam, self.answers, self.elapsed(), ("clear", {"index": self.current})
@@ -585,7 +708,9 @@ class Trainer(QMainWindow):
         self.show_question(self.current)
 
     def next_question(self):
-        self.show_question(min(len(self.exam["questions"]) - 1, self.current + 1))
+        self.show_question(
+            min(len(self.exam["questions"]) - 1, self.current + 1), activity=True
+        )
 
     def finish_exam(self):
         if self.result or self.read_only:
@@ -602,11 +727,11 @@ class Trainer(QMainWindow):
             != QMessageBox.Yes
         ):
             return
-        self.elapsed_base = self.elapsed()
+        self.exam_timer.finish()
         self.speech.reset()
-        self.started = 0
         personal_best = self.history.is_personal_best(grade(self.exam, self.answers))
-        self.result = self.history.finish(self.exam, self.answers, self.elapsed_base)
+        self.result = self.history.finish(self.exam, self.answers, self.elapsed())
+        self.update_exam_clock()
         self.fill_sidebar()
         self.show_question(self.current)
         self.build_report()
@@ -844,6 +969,11 @@ class Trainer(QMainWindow):
             self.statusBar().showMessage("History exported: " + path, 10000)
 
     def save_preferences(self):
+        if self.exam:
+            self.settings.set(
+                "exam_timer_" + self.dataset.history_key,
+                {"run": self.exam["id"], "paused": self.exam_timer.state == "paused"},
+            )
         self.settings.set("window_width", self.width())
         self.settings.set("window_height", self.height())
         self.settings.set("mode", self.mode.currentIndex())
@@ -931,6 +1061,8 @@ class Trainer(QMainWindow):
         dialog.exec()
 
     def closeEvent(self, event):
+        self.exam_timer.transition(focused=False)
+        self.clock_display_timer.stop()
         try:
             self.autosave()
         except OSError as error:

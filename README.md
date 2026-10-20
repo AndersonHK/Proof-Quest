@@ -10,9 +10,11 @@ Choose an edition in [Dist/README.md](Dist/README.md): a Windows MSI installer, 
 
 For personal use and local testing in this repository, run `python Scripts/install_local.py`, then open `Local/ProofQuest/ProofQuest.exe`. `Local/` is Git-ignored. Updating that installation preserves your settings and practice history. `Dist/` contains the three shareable packages and their README, and is tracked.
 
-Click **Select new dataset** and choose its `dataset.json`. The **Help** button explains practice, grading, playback, and dataset selection. The initial release includes a small original demo. Private course datasets are external and ignored by Git.
+Click **Select new dataset** and choose its `dataset.json`. The **Help** button explains practice, grading, playback, and dataset selection. Each edition includes a small original demo. Private course datasets are external and ignored by Git.
 
 The selected dataset, window dimensions, chapter filters, run mode, volume, playback speed, and playback position are saved in `proofquest.ini` beside the executable. Run the app from a writable folder. Practice history is stored in adjacent `Logs/`, separately for each dataset.
+
+The [exam timer](Docs/User-Guide.md#exam-time) counts focused-window activity and supports explicit pause/resume across tabs. Fable’s reserved space keeps the notification card stable during grading and review.
 
 ## Develop
 

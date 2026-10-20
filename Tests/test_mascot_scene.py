@@ -86,6 +86,44 @@ def test_nonrecord_skips_confetti_and_rapid_regeneration_recovers(
     w.close()
 
 
+def test_review_slot_never_resizes_card_or_timer(qt, make_dataset, tmp_path):
+    w, clock = window(qt, make_dataset, tmp_path)
+    try:
+        # Hold content constant to isolate layout changes caused by the fox.
+        w.banner.setText("Ready to practice.")
+        qt.processEvents()
+
+        def geometry():
+            return tuple(
+                (x.geometry().getRect())
+                for x in (w.banner_card, w.exam_time, w.timer_button)
+            )
+
+        before = geometry()
+        assert w.banner_card.height() < w.mascot_review.height()
+        from app import label
+
+        old_card = label("Ready to practice.", "banner")
+        old_card.ensurePolished()
+        assert w.banner_card.height() <= old_card.sizeHint().height() + 2
+        old_card.deleteLater()
+        assert not w.mascot_review.isVisible()
+        w.journey.finished(False)
+        qt.processEvents()
+        assert w.mascot_review.isVisible() and geometry() == before
+        clock[0] += 2
+        w.journey.tick()
+        qt.processEvents()
+        assert w.journey.state == "review" and geometry() == before
+        w.journey.regenerated()
+        clock[0] += 2
+        w.journey.tick()
+        qt.processEvents()
+        assert not w.mascot_review.isVisible() and geometry() == before
+    finally:
+        w.close()
+
+
 def test_personal_best_uses_percentage_and_persistent_book_history(tmp_path):
     path = tmp_path / "book1.sqlite3"
     history = History(path)

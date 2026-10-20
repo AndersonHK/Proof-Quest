@@ -1,21 +1,30 @@
 # Current release validation
 
-The current testing release is version 0.4.5 for Windows x64. `Dist/ProofQuest-win-x64.zip` contains the entire runnable bundle and a public INI selecting its original demo. The internal release manifest records source hashes, runtime versions, executable hash, and the file inventory. Personal use and testing take place in ignored `Local/ProofQuest/`.
+Version 0.4.10 provides the Windows portable ZIP, per-user Windows MSI, and Python-source ZIP listed in [Distribution editions](../Dist/README.md). All contain the original demo and public resources only. Personal settings, history, source pages, course datasets, transcripts and recordings remain external. Detailed receipts, screenshots and build logs stay in ignored `Out/`.
 
-## Checks
+## Automated checks
 
-- Automated tests cover schema consistency, answer sampling/formatting (including reduced fractions), grading, persistence, dataset switching, Help, long Unicode content, ZIP/privacy boundaries, migration, window fitting, editable run counts, rotating feedback, orange/blue explanation contrast and labels, curated distractor sampling, direct-click sliders, audio-device selection, Fable artwork/pose timing, the new palette, event-driven mascot transitions, interruption recovery, and persistent per-dataset personal-best comparisons, uninterrupted sips, mug clicks, and attempted-only scoring including legacy history, hint event recording, review milestones/streaks, non-repetition, and floating mouth-anchored bubbles, separate invitation lines, length-scaled speech timing, and concise reactions without explanatory boilerplate, and hierarchical transcript formatting with Unicode word mapping and heading search/seek.
-- Surface-pattern audits sample 200 displays per question; semantic distractor relevance still requires editorial review. Private curation receipts remain with the ignored dataset.
-- Synthetic coverage includes 32 chapters, question text longer than 5,000 characters, and supplementary Unicode characters in timestamp-to-cursor mapping.
-- The ZIP is extracted to an isolated location and its executable smoke test opens the bundled demo, grades all questions correctly, saves INI/history, captures the interface, verifies the timed trip to review, sip, and return home, and exits successfully without invoking a Python interpreter.
-- The installed local executable is also tested with the ignored personal dataset and checks grading plus actual muted media-clock progression. Test history is isolated from personal history. Private content and detailed receipts are not committed.
-- An unmuted Windows audio-session probe reproduces the FFmpeg backend's unsupported headset channel-layout failure, then verifies nonzero session output with the native Windows backend. The player also rebinds to the current system default or an explicitly selected device. A moving playback clock alone is not accepted as evidence of sound output.
-- A speed-change probe reproduced silent output at 1.25x, 0.75x and the return to 1x with the old live-rate path. The repaired selector produced nonzero Windows audio-session output at every tested transition (1x, 1.25x, 1.5x, 0.75x, 2x, 1x). Regression tests cover playing, paused and stopped states, unchanged volume/mute/device, unchanged-rate selection, rapid changes and an immediate user pause. The packaged private-dataset check also changes speed and verifies continued clock advancement.
-- Practice and graded-report screenshots are visually inspected. Raw screenshots, test receipts, and build logs stay under ignored `Out/`.
-- The staged-file and ZIP audits exclude private datasets, recordings, source generators, logs, and personal settings. The sole distribution INI is the canonical demo default. ZIP integrity, its executable hash, file inventory, and bundled demo identity are checked.
+The 90-test suite covers dataset/schema validation, answer sampling and formatting, attempted-only grading, persistence, dataset switching, Help, Unicode content, packaging boundaries, narration controls, transcript headings and word mapping, Fable's animation/dialogue, and UI layout.
 
-These checks establish behavior on the development Windows 10 x64 environment. Other Windows versions and machines have not been separately tested. Service-generated word boundaries provide synchronization; audio-device latency may vary between machines. The executable is unsigned. The public repository distributes the MIT-licensed project and original demo; private course material remains external.
+Active-time tests use an injected monotonic clock to verify activity-triggered startup, focus suspension/resumption, explicit pause across tabs and question activity, restored runs, saved pause intent, finished totals and regeneration. UI checks verify fixed timer/button geometry, reserved mascot space through the full animation round trip, compact card height, timer clearance and a review pointer that moves with its bubble.
 
-See [Development](Development.md) for repeatable commands and [Dataset format](Dataset-Format.md) for the contracts validated by the tests. Academic correctness remains the dataset author's responsibility; schema validation cannot determine whether an answer is factually correct.
+Synthetic fixtures include 32 chapters, question text longer than 5,000 characters, and supplementary Unicode characters. Choice-surface audits sample 200 displays per question; academic correctness and semantic distractor quality still require editorial review.
 
-Distribution validation also covers the per-user MSI lifecycle and the Python-source ZIP. The transcript-follow tests cover wheel, keyboard, scrollbar track and drag actions, immediate sync without seeking, and the emphasized yellow button. Native non-Windows execution has not been tested.
+## Runtime and visual checks
+
+- Packaged demo and private-dataset smoke tests exercise answer selection, grading, hint logging, settings/history, and the mascot's review/sip/return sequence. Audio-enabled tests also verify muted clock progression through a playback-speed change. Test homes are isolated from personal history.
+- A native Windows two-window probe verifies that focus loss excludes time, focus return resumes it, running transcript time counts, and explicit pause remains effective on the transcript tab.
+- The approved card and speech layout was visually inspected at native 200% scaling. The single-line card measured 54 logical pixels tall. Fable's space is reserved before grading; the review bubble retains its normal width/padding and lowers its body and short pointer together to clear the timer controls. Speech remains a floating overlay and can cover underlying review text while visible.
+- Earlier unmuted Windows audio-session probes reproduced silent output with the FFmpeg backend and with direct native playback-rate changes. The native backend plus pause/change-rate/resume sequence produced nonzero output at each tested speed transition. A moving media clock alone is not evidence of audible output.
+
+## Distribution checks
+
+Release audits verify documentation links, staged private-path exclusions, ZIP integrity, public-demo identity, canonical settings, source/executable hashes, and MSI inventory/version agreement with the portable ZIP. The Python ZIP is checked against its exact public source/resource whitelist and SHA-256 inventory, and launched from a separate extracted folder.
+
+The installer lifecycle was validated when the MSI pipeline was introduced: per-user install, older-version upgrade, repair at the remembered install path, downgrade rejection, and uninstall all behaved as expected. User-created INI/history survived maintenance, and installed payload bytes matched the portable ZIP. The installer implementation is unchanged in this release; current MSI inventory and version checks are repeated for the rebuilt package.
+
+## Limits
+
+Runtime validation is on Windows 10 x64. Native macOS/Linux behavior and other Windows machines have not been separately tested. Word boundaries come from the dataset's timing metadata; device latency may vary. Windows packages are unsigned. Existing historical elapsed totals are preserved because earlier unfocused intervals cannot be reconstructed retroactively.
+
+See [Development](Development.md) for repeatable commands and [Dataset format](Dataset-Format.md) for validated content contracts. Proof Quest is MIT licensed; external datasets retain their authors' rights and are not distributed with the app.

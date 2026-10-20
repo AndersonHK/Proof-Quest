@@ -206,9 +206,19 @@ class SpeechDirector(QObject):
             # The pointer stays at the mouth while the balloon body clears the title.
             self.active.body_top = max(1.0, title_bottom - 1 - y)
             height += round(self.active.body_top - 1)
+        else:
+            # Lower the review body by at least 15 logical pixels (30 at 200%
+            # DPI), clearing the timer controls. Its tail moves down with it.
+            controls_bottom = max(
+                control.mapTo(parent, QPoint(0, control.height())).y()
+                for control in (self.window.exam_time, self.window.timer_button)
+            )
+            self.active.body_top = max(16.0, controls_bottom + 4 - y)
+            height += round(self.active.body_top - 1)
         x = max(4, min(x, parent.width() - width - 4))
         self.active.setGeometry(round(x), round(y), width, height)
-        self.active.tail_y = max(4, min(height - 12, mouth_y - y))
+        tail_offset = self.active.body_top - 1 if self.active is self.review else 0
+        self.active.tail_y = max(4, min(height - 12, mouth_y - y + tail_offset))
         self.active.raise_()
 
     def clicked(self):

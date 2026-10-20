@@ -15,8 +15,8 @@ Use an isolated environment and the pinned requirements. Setup commands in the r
 ```powershell
 .venv\Scripts\python.exe -m pytest Tests -q
 .venv\Scripts\python.exe Scripts\validate_dataset.py Examples\Demo\dataset.json
-.venv\Scripts\python.exe Scripts\check_repository.py
 .venv\Scripts\python.exe Scripts\build.py
+.venv\Scripts\python.exe Scripts\check_repository.py
 .venv\Scripts\python.exe Scripts\install_local.py
 ```
 
@@ -26,13 +26,13 @@ Tests use synthetic data and temporary histories. They cover pool sampling, grad
 
 ## Build output
 
-PyInstaller stages a Windows x64 bundle under ignored `Out/Package/ProofQuest/`. A native Qt icon packager writes 16–256-pixel fox ICO frames, embedded in the EXE and used by the window. Windows uses an explicit Fable app identity; the local installer refreshes only this app’s shell entries. The build then produces `Dist/ProofQuest-win-x64.zip`, `Dist/ProofQuest-win-x64.msi`, and `Dist/ProofQuest-python.zip`. Its top-level `ProofQuest/` folder contains the EXE, shared runtime libraries, original demo, Help, notices, manifest, and a public `proofquest.ini` selecting `_internal/Examples/Demo/dataset.json`. Private dataset roots and personal settings are never build inputs.
+PyInstaller stages a Windows x64 bundle under ignored `Out/Package/ProofQuest/`. A native Qt icon packager writes 16–256-pixel fox ICO frames, embedded in the EXE and used by the window. Windows uses an explicit Fable app identity; the local installer refreshes only this app’s shell entries. The build then produces `Dist/ProofQuest-win-x64.zip`, `Dist/ProofQuest-win-x64.msi`, and `Dist/ProofQuest-python.zip`. The portable Windows ZIP’s top-level `ProofQuest/` folder contains the EXE, shared runtime libraries, original demo, Help, notices, manifest, and a public `proofquest.ini` selecting `_internal/Examples/Demo/dataset.json`. Private dataset roots and personal settings are never build inputs.
 
 All three packages and `Dist/README.md` are tracked. Personal usage and local testing happen in ignored `Local/ProofQuest/`, deployed by `Scripts/install_local.py`. Build metadata and relative source hashes are inside the ZIP; absolute local paths and raw task logs do not belong in public documentation.
 
 The installer verifies the ZIP before extracting it into temporary ignored staging, then updates managed runtime files. An existing local INI and `Logs/` are preserved. The installer refuses to replace a running EXE. Builds do not modify the personal installation until the install script is invoked.
 
-For migration from the old loose distribution layout, use `python Scripts/install_local.py --migrate-dist-state` once. It rebases the dataset path, copies history using SQLite backup, verifies it, then removes the old Dist history and restores demo defaults there. It refuses to merge independently used local settings/history. After successful migration and verification, retire the old `Dist/ProofQuest/` folder; the ZIP is the distributable.
+For migration from the old loose distribution layout, use `python Scripts/install_local.py --migrate-dist-state` once. It rebases the dataset path, copies history using SQLite backup, verifies it, then removes the old Dist history and restores demo defaults there. It refuses to merge independently used local settings/history. After successful migration and verification, retire the old `Dist/ProofQuest/` folder; the portable ZIP is the maintained Windows folder bundle.
 
 Run the packaged smoke test from the root:
 
@@ -60,7 +60,7 @@ Installer design follows [Microsoft's installation-context guidance](https://lea
 
 ## Source and publication boundaries
 
-Run `Scripts/check_repository.py` before committing. It checks documentation links, forbidden staged paths, the ZIP inventory, bundled-demo identity, canonical INI, executable hash, and archive integrity. Inspect `git diff --cached --check`, the staged inventory, and `git status` as well. Personal INI/history stay ignored in Local. The only distribution INI is the public demo default inside the tracked ZIP.
+Run `Scripts/check_repository.py` before committing. Run it after rebuilding: it checks documentation links, forbidden staged paths, Windows ZIP inventory/integrity, MSI inventory/version agreement, Python ZIP source hashes, bundled-demo identity, canonical settings and executable hashes. Inspect `git diff --cached --check`, the staged inventory, and `git status` as well. Personal INI/history stay ignored in Local. Both ZIP editions contain only their canonical public-demo INI; the MSI lets the app create its settings on first launch.
 
 Do not add a remote or push without explicit authorization. Original Proof Quest project files are distributed under the [MIT license](../LICENSE). The public ZIP includes that license alongside third-party notices. Upstream runtime components keep their own licenses and notices; see [third-party notices](../THIRD-PARTY-NOTICES.md).
 
@@ -70,7 +70,7 @@ Scoring uses attempted answers only. `normalize_result` derives scores from save
 
 ## Companion dialogue
 
-`Src/companion.py` owns original quips, a last-three-template exclusion queue, authored-hint lookup, and conservative review phrasing. `Src/speech.py` owns free-floating, click-through balloons parented to the central widget; they are not layout children. The header balloon is up to 560 logical pixels wide; its body clears the title while an offset pointer stays beside the mouth. Their tails track the mascot mouth, their words fade without reflow using UTF-16-aware Qt text ranges, and their bounds follow window resizing. A talking cycle spanning the text reveal uses the image-generated `Assets/Fable/talking.png` atlas. `Talking-Prompt.json` retains its built-in imagegen prompt.
+`Src/companion.py` owns original quips, a last-three-template exclusion queue, authored-hint lookup, and conservative review phrasing. `Src/speech.py` owns free-floating, click-through balloons parented to the central widget; they are not layout children. The header balloon is up to 560 logical pixels wide; its body clears the title while an offset pointer stays beside the mouth. The review balloon is up to 420 logical pixels wide and keeps its normal padding. Its body and pointer move down together to clear the timer controls, retaining a short pointer beside Fable. Both balloons fade their words without reflow using UTF-16-aware Qt text ranges and follow window resizing. They remain overlays and can cover underlying review content while visible. A talking cycle spanning the text reveal uses the image-generated `Assets/Fable/talking.png` atlas. `Talking-Prompt.json` retains its built-in imagegen prompt.
 
 Hint priority is question `hint`, bank `topic_hints[topic]`, then an explicitly general fallback. The answer pool and answer explanation are never used to synthesize a hint. Dataset authors must review hint quality and avoid giving the final answer. Clicks record `hint` events with question ID/index. `History.question_performance` reads completed attempts only, through the current run, with hint-assisted milestones distinguished. Speech caches those facts for the current run and invalidates on regeneration. Automatic review comments and quips avoid their last three template IDs; explicitly requesting a hint can show that same authored note again.
 
@@ -91,3 +91,17 @@ Quips occupy one line, followed by “Click Fable again for a hint.” on its ow
 ## Narration following
 
 Following starts enabled for each listening session. Wheel/trackpad, scrollbar drag/track actions, and transcript navigation keys detach the view; programmatic highlighting and scrolling do not. The checkbox becomes a warm yellow, bold **Sync to Narration** button. Sync reveals the current word immediately, even while paused or before the first timestamp, without seeking or restarting playback. Existing highlighting continues while the user browses. The saved legacy follow preference is ignored on session startup.
+
+## Active exam time
+
+`Src/exam_timer.py` owns a monotonic clock with waiting, running, paused and finished states. Focus is an independent gate: it suspends accumulation without changing the user's run/pause intent. Window activation/deactivation, minimization and application activation events update that gate. The 250 ms UI timer only refreshes the display; it does not estimate elapsed time from tick counts. Tab changes do not change timing state.
+
+Startup and restored runs wait for explicit exam activity. Internal question rendering and sidebar refreshes do not start timing; user selection (including the already selected sidebar question), answer/clear actions, navigation, mascot clicks and regeneration do. Explicit pause survives activity until Resume or regeneration. The current run's manual-pause flag is stored with its run ID under the dataset's INI key, while elapsed seconds continue to use the existing history field. Closing saves the focused total; reopening never charges closed time. Existing historical seconds are retained because unfocused time cannot be reconstructed retroactively.
+
+The banner remains a text label inside a notification frame. A fixed-width, right-aligned clock and a button sized for every label reserve the right-hand area, preventing text shifts on Pause/Resume/Finished changes. Submitted runs freeze their time and disable the button. Tests use an injected monotonic clock for exact duration, focus, tab, pause, startup, restoration and grading checks, plus UI geometry checks.
+
+## Notification card layout
+
+Fable’s 84-pixel review anchor retains its layout space while hidden, reserving the right margin before grading. The notification frame is vertically centered rather than stretched to the anchor’s height, so showing/hiding the fox neither changes the card width nor forces a taller card. Its own text and controls determine its height.
+
+The notification frame uses six logical pixels of top/bottom layout padding to keep its single-line height close to the original text-only card despite the timer button. Review speech moves its body down by at least 15 logical pixels and, when necessary, farther to leave four pixels below the clock/button bounds. The review pointer moves down with the body, retaining its original short angle beside Fable; home speech remains anchored at the mouth.

@@ -238,3 +238,31 @@ def test_long_hints_get_slower_reveal_and_reading_time_after_reveal(
     assert not w.speech_home.isVisible()
     assert speech_timing("漢字" * 100)[1] > short_times[1]
     w.close()
+
+
+def test_review_bubble_and_pointer_move_together_below_timer(
+    qt, make_dataset, tmp_path
+):
+    from PySide6.QtCore import QPoint
+
+    w = Trainer(Dataset(make_dataset(2)), Settings(tmp_path / "home"))
+    try:
+        w.show()
+        QTest.qWait(100)
+        w.journey.finished(False)
+        w.journey.since -= 2
+        w.journey.tick()
+        qt.processEvents()
+        w.speech.post(
+            "Not attempted. This question was excluded from scoring.", review=True
+        )
+        bubble = w.speech_review
+        bottom = max(
+            c.mapTo(w.centralWidget(), QPoint(0, c.height())).y()
+            for c in (w.exam_time, w.timer_button)
+        )
+        assert bubble.body_top >= 16
+        assert bubble.y() + bubble.body_top >= bottom + 3
+        assert abs(bubble.tail_y - bubble.body_top - 3) <= 1
+    finally:
+        w.close()

@@ -111,7 +111,7 @@ def test_explanation_is_direct_and_time_removed(
     for i, q in enumerate(w.exam["questions"]):
         w.show_question(i)
         w.select_answer(next(j for j, o in enumerate(q["options"]) if not o["correct"]))
-    w.elapsed_base = 11862
+    w.exam_timer.total = 11862
     w.finish_exam()
     w.show_question(0)
     assert "#49301e" in w.explanation.styleSheet() and "197:42" not in w.banner.text()

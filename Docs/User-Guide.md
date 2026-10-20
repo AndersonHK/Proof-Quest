@@ -6,6 +6,8 @@ Fable is the fox in the header and application icon. The violet/plum/cream palet
 
 ## Install and update
 
+The Windows MSI installs for your account and adds a Start-menu shortcut. Upgrades and uninstall preserve your settings and history. The Python edition runs from source using the virtual-environment setup in its bundled README.
+
 Extract the complete distribution ZIP to a writable folder and run `ProofQuest.exe` inside its `ProofQuest` folder. The EXE, `_internal` libraries/resources, sample demo, Help content, and demo-configured `proofquest.ini` are all included. Do not run the EXE inside the ZIP or move it away from its runtime folder.
 
 In the development repository, the personal installation is `Local/ProofQuest/`. Run `python Scripts/install_local.py` to install or update it from the tracked ZIP in `Dist/`. Close the local app before updating. The update preserves your INI, course selection, and history. Local files are ignored by Git; the distributable always starts with the public demo.
@@ -26,9 +28,19 @@ Every question displays one randomly chosen correct alternative and four randoml
 
 **Finish exam** grades every question. Unanswered questions are marked not attempted and excluded from scores, accuracy, weak-topic statistics, streaks, and records. Correct choices are highlighted green; an incorrect selection is marked separately. The report explains the answer and cites the dataset's source reference. Select a question in the sidebar to inspect its five choices.
 
-Missed-answer explanations use muted orange; successful-answer explanations use blue. Answer choices retain green/red grading colors. Short reactions rotate through twelve phrases per outcome and remain stable while revisiting the same question. They lead directly into the explanation, without extra explanatory headings. The submitted-exam banner shows the score and items to revisit, without elapsed time. Timing remains available in history and exports.
+Missed-answer explanations use muted orange; successful-answer explanations use blue. Answer choices retain green/red grading colors. Short reactions rotate through twelve phrases per outcome and remain stable while revisiting the same question. They lead directly into the explanation, without extra explanatory headings. The notification card shows active exam time on its right, with a fixed-width Pause/Resume button. Finishing freezes the timer; the total is also saved in history and exports.
 
 Regenerating an unfinished run preserves it as abandoned after a prompt. Closing or switching datasets preserves the unfinished run for later resumption. Previously saved runs use the same attempted-only scoring when viewed or analyzed; their stored snapshots are not rewritten. Completed and abandoned snapshots retain the exact questions, five choices, order, answers, timing, and answer-change events.
+
+## Exam time
+
+Exam time counts only while the Proof Quest window is focused. Opening or restoring a run waits for exam activity: regenerating, selecting a question, answering, clearing an answer, or clicking Fable.
+
+Switching tabs alone does not start a waiting timer. Once started, focused reading/listening time counts across tabs. Losing focus or minimizing suspends timing, and returning resumes it unless you explicitly paused.
+
+An explicit pause stays paused across tabs, question activity, dataset switches and restarts until Resume or a new test. Restored unpaused runs wait for new activity. Previously saved totals are retained; earlier versions did not distinguish focused time.
+
+Fable’s space on the right is reserved throughout the run, so his arrival does not resize the card or move its timer. The card keeps its own height.
 
 ## Fable’s study notes
 
@@ -36,7 +48,7 @@ While Fable is in the header, the first click offers an original quip and invite
 
 After grading, Fable comments when it arrives with the mug and when the reviewed question changes. Comments can mark a first correct answer, a consecutive-correct streak, or accuracy on that particular question once at least five attempts exist. Only attempted answers in completed runs count; skipped questions and abandoned runs neither add attempts nor break streaks. Hint-assisted first successes and streaks are identified. Numerical comments describe recorded attempts, not predicted mastery. Quips and review comments avoid their previous three message templates.
 
-The warm yellow balloon floats above the interface, with a tail beside Fable’s mouth. It never takes layout space or intercepts clicks. The quip fits on one line, with the hint invitation on a separate second line. Longer hints reveal more slowly and stay fully visible for longer before fading. Fable talks while the words appear. Active sips finish before review speech begins; rapid question changes replace the pending comment with the current question’s comment. Dataset changes and closing cancel pending speech. A dataset without an authored hint receives a general study prompt rather than an invented explanation.
+The warm yellow balloon floats above the interface. Header speech points toward Fable’s mouth; review speech sits lower, with its pointer beside Fable so the timer controls stay readable. It never takes layout space or intercepts clicks. The quip fits on one line, with the hint invitation on a separate second line. Longer hints reveal more slowly and stay fully visible for longer before fading. Fable talks while the words appear. Active sips finish before review speech begins; rapid question changes replace the pending comment with the current question’s comment. Dataset changes and closing cancel pending speech. A dataset without an authored hint receives a general study prompt rather than an invented explanation.
 
 ## Listen
 
@@ -54,6 +66,6 @@ Audio is optional. A question-only dataset remains fully usable. Word highlights
 
 Correct answers award ten XP each; finishing a run with at least one attempted question awards twenty. Each 250 XP adds a level. Abandoned runs do not affect XP or mastery accuracy.
 
-Settings are in `proofquest.ini` beside the executable. Source-code launches keep the INI at the repository root. History databases are under adjacent `Logs/`, separated by dataset ID. A dataset's ID should remain stable across revisions and different books should use different IDs. Elapsed exam time counts the open run, including reading/listening time, but excludes time while the app is closed.
+Settings are in `proofquest.ini` beside the executable. Source-code launches keep the INI at the repository root. History databases are under adjacent `Logs/`, separated by dataset ID. A dataset's ID should remain stable across revisions and different books should use different IDs.
 
 If the selected dataset has moved, choose its new manifest at startup or use `ProofQuest.exe --dataset path\to\dataset.json`. No account, cloud service, or global Python installation is needed for the packaged app.
