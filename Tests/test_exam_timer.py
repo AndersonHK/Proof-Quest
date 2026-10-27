@@ -71,10 +71,10 @@ def test_activity_tabs_focus_manual_pause_and_fixed_timer_layout(
     w.tabs.setCurrentIndex(1)
     now[0] += 100
     w.tabs.setCurrentIndex(0)
+    assert w.elapsed() == 15 and w.exam_timer.state == "paused"
     w.options[0].click()
     w.next_question()
-    assert w.elapsed() == 15 and w.exam_timer.state == "paused"
-    w.timer_button.click()
+    assert w.elapsed() == 15 and w.exam_timer.state == "running"
     now[0] += 5
     QApplication.sendEvent(w, QEvent(QEvent.WindowDeactivate))
     now[0] += 100
@@ -109,7 +109,52 @@ def test_restored_runs_wait_for_activity_and_keep_explicit_pause(
     w.close()
     w = Trainer(Dataset(path), Settings(settings.home))
     assert w.exam_timer.state == "paused"
-    w.select_answer(2)
     w.tabs.setCurrentIndex(1)
     assert w.exam_timer.state == "paused"
+    w.select_answer(2)
+    assert w.exam_timer.state == "running"
     w.close()
+
+
+def test_question_and_answer_actions_resume_but_rendering_and_tabs_do_not(
+    qt, make_dataset, tmp_path
+):
+    w = Trainer(Dataset(make_dataset(4)), Settings(tmp_path / "home"))
+    w.show()
+    QTest.qWait(100)
+    now = [100.0]
+    w.exam_timer.now = lambda: now[0]
+    w.exam_timer.reset()
+    w.exam_timer.transition("paused", focused=True)
+    try:
+        w.show_question(0)
+        w.fill_sidebar()
+        w.mascot.clicked.emit()
+        w.tabs.setCurrentIndex(1)
+        w.tabs.setCurrentIndex(0)
+        assert w.exam_timer.state == "paused"
+        for action in (
+            lambda: w.sidebar.itemClicked.emit(w.sidebar.currentItem()),
+            lambda: w.sidebar.setCurrentRow(1),
+            lambda: w.options[0].click(),
+            lambda: w.options[1].click(),
+            w.clear_answer,
+            w.next_question,
+            w.previous.click,
+        ):
+            w.exam_timer.transition("paused")
+            before = w.elapsed()
+            now[0] += 20
+            action()
+            assert w.exam_timer.state == "running"
+            assert w.timer_button.text() == "Ⅱ Pause"
+            now[0] += 2
+            assert w.elapsed() == before + 2
+        # Activity can arm resumption while unfocused, but must not count that gap.
+        w.exam_timer.transition("paused", focused=False)
+        before = w.elapsed()
+        w.options[2].click()
+        now[0] += 100
+        assert w.exam_timer.state == "running" and w.elapsed() == before
+    finally:
+        w.close()

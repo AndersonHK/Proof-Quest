@@ -1,18 +1,18 @@
 # Current release validation
 
-Version 0.4.10 provides the Windows portable ZIP, per-user Windows MSI, and Python-source ZIP listed in [Distribution editions](../Dist/README.md). All contain the original demo and public resources only. Personal settings, history, source pages, course datasets, transcripts and recordings remain external. Detailed receipts, screenshots and build logs stay in ignored `Out/`.
+Version 0.4.11 provides the Windows portable ZIP, per-user Windows MSI, and Python-source ZIP listed in [Distribution editions](../Dist/README.md). All contain the original demo and public resources only. Personal settings, history, source pages, course datasets, transcripts and recordings remain external. Detailed receipts, screenshots and build logs stay in ignored `Out/`.
 
 ## Automated checks
 
-The 90-test suite covers dataset/schema validation, answer sampling and formatting, attempted-only grading, persistence, dataset switching, Help, Unicode content, packaging boundaries, narration controls, transcript headings and word mapping, Fable's animation/dialogue, and UI layout.
+The 91-test suite covers dataset/schema validation, answer sampling and formatting, attempted-only grading, persistence, dataset switching, Help, Unicode content, packaging boundaries, narration controls, transcript headings and word mapping, Fable's animation/dialogue, and UI layout.
 
-Active-time tests use an injected monotonic clock to verify activity-triggered startup, focus suspension/resumption, explicit pause across tabs and question activity, restored runs, saved pause intent, finished totals and regeneration. UI checks verify fixed timer/button geometry, reserved mascot space through the full animation round trip, compact card height, timer clearance and a review pointer that moves with its bubble.
+Active-time tests use an injected monotonic clock to verify activity-triggered startup, focus suspension/resumption, pause preservation across tabs and resumption through question/answer activity, restored runs, saved pause intent, finished totals and regeneration. UI checks verify fixed timer/button geometry, reserved mascot space through the full animation round trip, compact card height, timer clearance and a review pointer that moves with its bubble.
 
 Synthetic fixtures include 32 chapters, question text longer than 5,000 characters, and supplementary Unicode characters. Choice-surface audits sample 200 displays per question; academic correctness and semantic distractor quality still require editorial review.
 
 ## Runtime and visual checks
 
-- Packaged demo and private-dataset smoke tests exercise answer selection, grading, hint logging, settings/history, and the mascot's review/sip/return sequence. Audio-enabled tests also verify muted clock progression through a playback-speed change. Test homes are isolated from personal history.
+- Packaged demo and private-dataset smoke tests exercise answer selection, grading, hint logging, settings/history, and the mascot's review/sip/return sequence. The packaged check explicitly pauses before reselecting a question and before answering, then verifies automatic resumption. Audio-enabled tests also verify muted clock progression through a playback-speed change. Test homes are isolated from personal history.
 - A native Windows two-window probe verifies that focus loss excludes time, focus return resumes it, running transcript time counts, and explicit pause remains effective on the transcript tab.
 - The approved card and speech layout was visually inspected at native 200% scaling. The single-line card measured 54 logical pixels tall. Fable's space is reserved before grading; the review bubble retains its normal width/padding and lowers its body and short pointer together to clear the timer controls. Speech remains a floating overlay and can cover underlying review text while visible.
 - Earlier unmuted Windows audio-session probes reproduced silent output with the FFmpeg backend and with direct native playback-rate changes. The native backend plus pause/change-rate/resume sequence produced nonzero output at each tested speed transition. A moving media clock alone is not evidence of audible output.

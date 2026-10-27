@@ -6,7 +6,7 @@ Fable, the violet fox, is the study companion. The interface uses violet actions
 
 ## Run
 
-Choose an edition in [Dist/README.md](Dist/README.md): a Windows MSI installer, a portable Windows ZIP, or a Python-source ZIP for supported macOS/Linux/Windows systems. For the portable Windows edition, download [Dist/ProofQuest-win-x64.zip](Dist/ProofQuest-win-x64.zip), extract it completely, and run `ProofQuest/ProofQuest.exe`. The ZIP contains everything needed, including the demo and its default INI. Keep `_internal` beside the EXE. Python is not required to run the packaged app.
+Download from [GitHub Releases](https://github.com/AndersonHK/Proof-Quest/releases/latest). Choose an edition in [Dist/README.md](Dist/README.md): a Windows MSI installer, a portable Windows ZIP, or a Python-source ZIP for supported macOS/Linux/Windows systems. For the portable Windows edition, download [Dist/ProofQuest-win-x64.zip](Dist/ProofQuest-win-x64.zip), extract it completely, and run `ProofQuest/ProofQuest.exe`. The ZIP contains everything needed, including the demo and its default INI. Keep `_internal` beside the EXE. Python is not required to run the packaged app.
 
 For personal use and local testing in this repository, run `python Scripts/install_local.py`, then open `Local/ProofQuest/ProofQuest.exe`. `Local/` is Git-ignored. Updating that installation preserves your settings and practice history. `Dist/` contains the three shareable packages and their README, and is tracked.
 

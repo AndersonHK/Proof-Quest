@@ -1,5 +1,7 @@
 # Choose a Proof Quest edition
 
+Published downloads are available through [GitHub Releases](https://github.com/AndersonHK/Proof-Quest/releases/latest), with release notes and SHA-256 checksums.
+
 All three editions include the app, Fable artwork, Help, and the original sample dataset. Personal course material is never included.
 
 | File | Use it for | Requirements |

@@ -29,8 +29,8 @@ class ExamTimer:
             self.focused = focused
         self.since = self.now() if self.running else None
 
-    def activity(self):
-        if self.state == "waiting":
+    def activity(self, resume_paused=False):
+        if self.state == "waiting" or (resume_paused and self.state == "paused"):
             self.transition("running")
 
     def toggle(self):

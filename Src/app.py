@@ -159,7 +159,7 @@ class Trainer(QMainWindow):
             shell, self.mascot, self.mascot_home, self.mascot_review, self.practice
         )
         self.speech = SpeechDirector(self, self.speech_home, self.speech_review)
-        self.mascot.clicked.connect(self.exam_activity)
+        self.mascot.clicked.connect(lambda: self.exam_activity(resume_paused=False))
         self.tabs.currentChanged.connect(self.tab_changed)
         self.statusBar().showMessage(
             "Answers save automatically. Choose carefully. Fable is judging."
@@ -416,9 +416,9 @@ class Trainer(QMainWindow):
         )
         self.update_exam_clock()
 
-    def exam_activity(self, *args):
+    def exam_activity(self, *args, resume_paused=True):
         if self.exam and not self.result and not self.read_only:
-            self.exam_timer.activity()
+            self.exam_timer.activity(resume_paused=resume_paused)
             self.update_exam_clock()
 
     def toggle_exam_timer(self):

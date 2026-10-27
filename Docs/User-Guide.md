@@ -38,7 +38,7 @@ Exam time counts only while the Proof Quest window is focused. Opening or restor
 
 Switching tabs alone does not start a waiting timer. Once started, focused reading/listening time counts across tabs. Losing focus or minimizing suspends timing, and returning resumes it unless you explicitly paused.
 
-An explicit pause stays paused across tabs, question activity, dataset switches and restarts until Resume or a new test. Restored unpaused runs wait for new activity. Previously saved totals are retained; earlier versions did not distinguish focused time.
+Selecting a question (including clicking the current one again), using Previous/Next, or selecting, changing or clearing an answer resumes a paused ongoing exam. Tabs alone and mascot clicks preserve an explicit pause. Pause also survives dataset switches and restarts until you resume through these question/answer actions, Resume, or a new test. Restored unpaused runs wait for new activity. Previously saved totals are retained; earlier versions did not distinguish focused time.
 
 Fable’s space on the right is reserved throughout the run, so his arrival does not resize the card or move its timer. The card keeps its own height.
 

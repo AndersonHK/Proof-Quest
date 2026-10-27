@@ -38,10 +38,16 @@ def run_exam_smoke(window, path, application, audible=False):
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
         window.grab().save(str(path.parent / "practice.png"))
+        window.exam_timer.transition("paused")
+        window.sidebar.itemClicked.emit(window.sidebar.currentItem())
+        assert window.exam_timer.state == "running"
         for i, q in enumerate(window.exam["questions"]):
             window.show_question(i)
             pick = next(j for j, o in enumerate(q["options"]) if o["correct"])
+            if i == 0:
+                window.exam_timer.transition("paused")
             window.options[pick].click()
+            assert window.exam_timer.state == "running"
         window.finish_exam()
         assert window.result["correct"] == window.result["total"]
         window.grab().save(str(path.parent / "graded.png"))
@@ -55,6 +61,7 @@ def run_exam_smoke(window, path, application, audible=False):
             "score": window.result["correct"],
             "settings_file": str(window.settings.path),
             "has_audio": window.listen.data is not None,
+            "exam_activity_resumed_timer": True,
             "hint_event_logged": bool(
                 window.history.db.execute(
                     "SELECT 1 FROM events WHERE run_id=? AND kind='hint'",
