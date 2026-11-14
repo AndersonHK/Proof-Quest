@@ -12,7 +12,7 @@ All three editions include the app, Fable artwork, Help, and the original sample
 
 ## Windows installer
 
-Double-click the MSI. It installs for your Windows account under `%LOCALAPPDATA%\Programs\ProofQuest` and adds **Proof Quest** to the Start menu. It does not require an administrator installation. Launch the app from the shortcut after setup. The demo opens on first run.
+Double-click the MSI. It installs for your Windows account under `%LOCALAPPDATA%\Programs\ProofQuest` and offers **Add a Start menu shortcut**, checked by default. It does not require an administrator installation. Launch the app from the shortcut after setup. The demo opens on first run.
 
 Install a newer MSI to upgrade; older versions are blocked. Use Windows **Installed apps** to uninstall. Updates and uninstall preserve your `proofquest.ini`, `Logs/`, and external datasets. Uninstall removes the program files and shortcut; remove the remaining personal-data folder yourself only if you no longer need your progress. Close Proof Quest before upgrading or uninstalling.
 

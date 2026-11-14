@@ -116,7 +116,9 @@ def add_ui(msi, db):
         "TextStyle",
         [("Normal", "Segoe UI", 9, None, 0), ("Heading", "Segoe UI", 14, None, 1)],
     )
-    msi.add_data(db, "Property", [("DefaultUIFont", "Normal")])
+    msi.add_data(
+        db, "Property", [("DefaultUIFont", "Normal"), ("STARTMENUSHORTCUT", "1")]
+    )
     welcome = msi.Dialog(
         db,
         "Welcome",
@@ -138,15 +140,29 @@ def add_ui(msi, db):
         330,
         90,
         3,
-        "Install Proof Quest for your Windows account, with its original demo and a Start-menu shortcut.\n\n"
+        "Install Proof Quest for your Windows account, with its original demo.\n\n"
         "Your settings and study history are kept when you update or uninstall.",
     )
-    welcome.pushbutton("Install", 215, 180, 65, 20, 3, "Install", "Cancel").event(
-        "EndDialog", "Return"
+    msi.add_data(db, "CheckBox", [("STARTMENUSHORTCUT", "1")])
+    welcome.control(
+        "StartMenuOption",
+        "CheckBox",
+        20,
+        145,
+        330,
+        18,
+        3,
+        "STARTMENUSHORTCUT",
+        "Add a Start menu shortcut",
+        "Install",
+        None,
     )
-    welcome.pushbutton("Cancel", 285, 180, 65, 20, 3, "Cancel", "Install").event(
-        "EndDialog", "Exit"
-    )
+    install = welcome.pushbutton("Install", 215, 180, 65, 20, 3, "Install", "Cancel")
+    install.event("[NOSHORTCUT]", "1", "NOT STARTMENUSHORTCUT", 1)
+    install.event("EndDialog", "Return", "1", 2)
+    welcome.pushbutton(
+        "Cancel", 285, 180, 65, 20, 3, "Cancel", "StartMenuOption"
+    ).event("EndDialog", "Exit")
     for name, message, result in [
         ("ExitDialog", "Proof Quest setup is complete.", "Return"),
         (
@@ -173,7 +189,7 @@ def add_ui(msi, db):
         dlg.pushbutton("Close", 280, 140, 70, 20, 3, "Close", None).event(
             "EndDialog", result
         )
-    msi.add_data(db, "InstallUISequence", [("Welcome", "NOT Installed", 1230)])
+    msi.add_data(db, "InstallUISequence", [("Welcome", "NOT Installed", 760)])
 
 
 def build_msi(staging, destination, version):
@@ -249,7 +265,7 @@ def build_msi(staging, destination, version):
         [
             ("UpgradeCode", UPGRADE_CODE),
             ("INSTALLLEVEL", "1"),
-            ("SecureCustomProperties", "OLDERPRODUCTS;NEWERPRODUCTS"),
+            ("SecureCustomProperties", "OLDERPRODUCTS;NEWERPRODUCTS;NOSHORTCUT"),
             ("ARPPRODUCTICON", "Fable.ico"),
             ("ARPHELPLINK", "https://github.com/AndersonHK/Proof-Quest"),
             ("ARPNOMODIFY", "1"),
@@ -382,6 +398,37 @@ def build_msi(staging, destination, version):
             )
         ],
     )
+    # Own the shortcut separately so opting out leaves the runtime installed.
+    shortcut_component = "StartMenuComponent"
+    msi.add_data(
+        db,
+        "Component",
+        [
+            (
+                shortcut_component,
+                identity("component:x64:start-menu-shortcut"),
+                "MenuDir",
+                260,
+                "NOT NOSHORTCUT AND (NOT Installed OR ?StartMenuComponent=3)",
+                "RStartMenu",
+            )
+        ],
+    )
+    msi.add_data(db, "FeatureComponents", [("Main", shortcut_component)])
+    msi.add_data(
+        db,
+        "Registry",
+        [
+            (
+                "RStartMenu",
+                1,
+                "Software\\ProofQuest\\Components",
+                shortcut_component,
+                version,
+                shortcut_component,
+            )
+        ],
+    )
     msi.add_data(
         db,
         "Shortcut",
@@ -390,7 +437,7 @@ def build_msi(staging, destination, version):
                 "StartMenu",
                 "MenuDir",
                 "PROOFQUE|Proof Quest",
-                exe_component,
+                shortcut_component,
                 "[#" + exe_file + "]",
                 None,
                 "Practice with Proof Quest",
@@ -403,7 +450,7 @@ def build_msi(staging, destination, version):
         ],
     )
     msi.add_data(
-        db, "RemoveFile", [("EmptyStartMenu", exe_component, None, "MenuDir", 2)]
+        db, "RemoveFile", [("EmptyStartMenu", shortcut_component, None, "MenuDir", 2)]
     )
     msi.add_data(
         db,

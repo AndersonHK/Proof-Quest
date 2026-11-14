@@ -6,7 +6,7 @@ Fable is the fox in the header and application icon. The violet/plum/cream palet
 
 ## Install and update
 
-The Windows MSI installs for your account and adds a Start-menu shortcut. Upgrades and uninstall preserve your settings and history. The Python edition runs from source using the virtual-environment setup in its bundled README.
+The Windows MSI installs for your account and offers a Start menu shortcut, checked by default. Upgrades and uninstall preserve your settings and history. The Python edition runs from source using the virtual-environment setup in its bundled README.
 
 Extract the complete distribution ZIP to a writable folder and run `ProofQuest.exe` inside its `ProofQuest` folder. The EXE, `_internal` libraries/resources, sample demo, Help content, and demo-configured `proofquest.ini` are all included. Do not run the EXE inside the ZIP or move it away from its runtime folder.
 

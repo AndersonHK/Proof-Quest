@@ -1,6 +1,6 @@
 # Current release validation
 
-Version 0.4.11 provides the Windows portable ZIP, per-user Windows MSI, and Python-source ZIP listed in [Distribution editions](../Dist/README.md). All contain the original demo and public resources only. Personal settings, history, source pages, course datasets, transcripts and recordings remain external. Detailed receipts, screenshots and build logs stay in ignored `Out/`.
+Version 0.4.12 provides the Windows portable ZIP, per-user Windows MSI, and Python-source ZIP listed in [Distribution editions](../Dist/README.md). All contain the original demo and public resources only. Personal settings, history, source pages, course datasets, transcripts and recordings remain external. Detailed receipts, screenshots and build logs stay in ignored `Out/`.
 
 ## Automated checks
 
@@ -21,7 +21,7 @@ Synthetic fixtures include 32 chapters, question text longer than 5,000 characte
 
 Release audits verify documentation links, staged private-path exclusions, ZIP integrity, public-demo identity, canonical settings, source/executable hashes, and MSI inventory/version agreement with the portable ZIP. The Python ZIP is checked against its exact public source/resource whitelist and SHA-256 inventory, and launched from a separate extracted folder.
 
-The installer lifecycle was validated when the MSI pipeline was introduced: per-user install, older-version upgrade, repair at the remembered install path, downgrade rejection, and uninstall all behaved as expected. User-created INI/history survived maintenance, and installed payload bytes matched the portable ZIP. The installer implementation is unchanged in this release; current MSI inventory and version checks are repeated for the rebuilt package.
+The installer lifecycle was validated when the MSI pipeline was introduced: per-user install, older-version upgrade, repair at the remembered install path, downgrade rejection, and uninstall all behaved as expected. User-created INI/history survived maintenance, and installed payload bytes matched the portable ZIP. The shortcut option is checked in the MSI tables and exercised by default and opt-out installations.
 
 ## Limits
 
