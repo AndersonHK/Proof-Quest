@@ -70,7 +70,7 @@ Scoring uses attempted answers only. `normalize_result` derives scores from save
 
 ## GitHub Releases
 
-When the user requests a new public release, publish it through GitHub's standard Releases feature as well as committing the distributables. Local build/deploy requests alone do not authorize publication. The release tag is `v` followed by the exact three-part `VERSION` value.
+The user’s standing instruction is to publish a matching GitHub Release whenever versioned distributables under `Dist/` are updated. Include this in the same task as the package update, commit and push. An explicit request for a local-only or unpublished build overrides this default. Private dataset-only changes do not require a new public application release. The release tag is `v` followed by the exact three-part `VERSION` value.
 
 1. Finish the source and documentation changes, run the relevant tests, rebuild all three packages, and run the package/privacy audit and isolated executable smoke checks. Verify that release-manifest source hashes match the current checkout.
 2. Make a detailed release commit, verify a clean worktree, and push it to the intended branch. Create and push a version tag pointing to that exact commit. Never move an existing published tag or silently replace an older release's assets.
